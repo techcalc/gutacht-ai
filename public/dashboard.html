@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GutachtAI - Desktop Zentrale</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-100 font-sans min-h-screen flex">
+
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between hidden md:flex">
+        <div class="p-6">
+            <h1 class="text-2xl font-bold tracking-wider text-blue-400">GutachtAI</h1>
+            <p class="text-xs text-slate-400 mb-8">Büro-Zentrale v1.0</p>
+            <nav class="space-y-2">
+                <a href="#" class="block bg-slate-800 text-white px-4 py-2 rounded-lg font-medium transition-colors">📂 Projekte</a>
+                <a href="/" class="block text-slate-400 hover:bg-slate-800 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">📱 Mobiler Rekorder</a>
+            </nav>
+        </div>
+        <div class="p-6 text-xs text-slate-500 border-t border-slate-800">&copy; 2026 GutachtAI</div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        <header class="bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm gap-4">
+            <div class="flex-1">
+                <h2 class="text-lg font-bold text-slate-800">Projekt-Befunde</h2>
+                <div class="flex items-center gap-2 mt-1">
+                    <input type="text" id="projectIdInput" placeholder="Projekt-ID eingeben…" class="text-xs border border-slate-300 rounded px-2 py-1 font-mono w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="loadProjectBtn" class="text-xs bg-slate-800 text-white px-3 py-1 rounded hover:bg-slate-700">Laden</button>
+                </div>
+            </div>
+            <button id="downloadPdfBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center space-x-2 transition-all active:scale-95">
+                <span>🖨️</span><span>White-Label PDF</span>
+            </button>
+        </header>
+
+        <div class="flex-1 flex overflow-hidden">
+            <div class="w-1/3 border-r border-slate-200 bg-white overflow-y-auto p-4 space-y-3">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Erfasste KI-Befunde</h3>
+                    <button id="refreshBtn" class="text-xs text-blue-600 hover:underline">🔄 Aktualisieren</button>
+                </div>
+                <div id="reportsList" class="space-y-3">
+                    <p class="text-xs text-slate-400 text-center py-4">Projekt-ID eingeben und „Laden“ klicken.</p>
+                </div>
+            </div>
+
+            <div class="w-2/3 bg-slate-50 overflow-y-auto p-6">
+                <div id="editorCard" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4 hidden">
+                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Befund bearbeiten</h3>
+                    <input type="hidden" id="editReportId">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Bauteil / Bereich</label>
+                        <input type="text" id="editRoom" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Mangelbeschreibung (Fachjargon)</label>
+                        <textarea id="editBefund" rows="5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Ursache</label>
+                        <textarea id="editUrsache" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Empfohlene Sanierungsmaßnahme</label>
+                        <textarea id="editMassnahme" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Dringlichkeit</label>
+                        <select id="editDringlichkeit" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option>Hoch</option><option selected>Mittel</option><option>Niedrig</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-between items-center pt-2">
+                        <span id="saveStatus" class="text-xs font-medium text-emerald-600"></span>
+                        <button id="saveBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg shadow-sm transition-all text-sm active:scale-95">💾 In DB speichern</button>
+                    </div>
+                </div>
+
+                <div id="editorPlaceholder" class="h-full flex flex-col items-center justify-center text-slate-400">
+                    <span class="text-4xl mb-2">👈</span>
+                    <p class="text-sm">Wähle links einen Befund aus, um ihn zu bearbeiten.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const BACKEND_URL = ""; // gleiche Origin
+
+        const projectInput = document.getElementById('projectIdInput');
+        // Projekt-ID aus URL (?projectId=) oder localStorage vorbelegen
+        const urlProj = new URLSearchParams(location.search).get('projectId');
+        projectInput.value = urlProj || localStorage.getItem('gutachtai_project') || "";
+
+        function currentProject() { return projectInput.value.trim(); }
+
+        document.getElementById('loadProjectBtn').addEventListener('click', () => {
+            localStorage.setItem('gutachtai_project', currentProject());
+            loadReports();
+        });
+        document.getElementById('refreshBtn').addEventListener('click', loadReports);
+        if (currentProject()) loadReports();
+
+        document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+            if (!currentProject()) return alert('Bitte zuerst eine Projekt-ID laden.');
+            window.location.href = `${BACKEND_URL}/api/generate-pdf?projectId=${encodeURIComponent(currentProject())}`;
+        });
+
+        let loadedReports = [];
+
+        async function loadReports() {
+            const list = document.getElementById('reportsList');
+            const pid = currentProject();
+            if (!pid) { list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Bitte Projekt-ID eingeben.</p>'; return; }
+            list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Lade…</p>';
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/reports?projectId=${encodeURIComponent(pid)}`);
+                const result = await res.json();
+                if (result.success && result.data.length > 0) {
+                    loadedReports = result.data;
+                    list.innerHTML = '';
+                    result.data.forEach((report, index) => {
+                        const c = report.structured_content || {};
+                        const card = document.createElement('div');
+                        card.className = "border border-slate-200 bg-white p-4 rounded-xl cursor-pointer hover:border-blue-400 transition-all";
+                        card.onclick = () => openEditor(index);
+                        card.innerHTML = `
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-xs text-slate-800 truncate">${escapeHtml(report.room_or_section || 'Allgemein')}</span>
+                                <span class="bg-slate-100 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">${escapeHtml(c.dringlichkeit || 'Mittel')}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 line-clamp-2">${escapeHtml(c.befund || 'Kein Text…')}</p>`;
+                        list.appendChild(card);
+                    });
+                } else if (result.success) {
+                    list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Noch keine Befunde für dieses Projekt.</p>';
+                } else {
+                    list.innerHTML = `<p class="text-xs text-red-500 text-center py-4">${escapeHtml(result.error || 'Fehler')}</p>`;
+                }
+            } catch (e) {
+                list.innerHTML = '<p class="text-xs text-red-500 text-center py-4">Fehler beim Laden vom Server.</p>';
+                console.error(e);
+            }
+        }
+
+        function openEditor(index) {
+            const report = loadedReports[index];
+            const c = report.structured_content || {};
+            document.getElementById('editorPlaceholder').classList.add('hidden');
+            document.getElementById('editorCard').classList.remove('hidden');
+            document.getElementById('editReportId').value = report.id;
+            document.getElementById('editRoom').value = report.room_or_section || '';
+            document.getElementById('editBefund').value = c.befund || '';
+            document.getElementById('editUrsache').value = c.ursache || '';
+            document.getElementById('editMassnahme').value = c.massnahme || '';
+            document.getElementById('editDringlichkeit').value = c.dringlichkeit || 'Mittel';
+            document.getElementById('saveStatus').innerText = '';
+        }
+
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const status = document.getElementById('saveStatus');
+            const payload = {
+                id: document.getElementById('editReportId').value,
+                room_or_section: document.getElementById('editRoom').value,
+                structured_content: {
+                    befund: document.getElementById('editBefund').value,
+                    ursache: document.getElementById('editUrsache').value,
+                    massnahme: document.getElementById('editMassnahme').value,
+                    dringlichkeit: document.getElementById('editDringlichkeit').value
+                }
+            };
+            status.innerText = "Speichere…";
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/update-report`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                status.innerText = result.success ? "✅ Gespeichert!" : "❌ " + (result.error || "Fehler");
+                if (result.success) loadReports();
+            } catch (e) { status.innerText = "❌ Netzwerkfehler."; console.error(e); }
+        });
+
+        function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+    </script>
+</body>
+</html>

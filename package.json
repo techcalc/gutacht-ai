@@ -1,0 +1,21 @@
+{
+  "name": "gutacht-ai",
+  "version": "1.0.0",
+  "description": "GutachtAI – Mängelaufnahme per Sprache, KI-Strukturierung via Gemini, Speicherung in Supabase",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google/genai": "^2.10.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^2.0.0",
+    "pdfkit": "^0.15.0"
+  }
+}
