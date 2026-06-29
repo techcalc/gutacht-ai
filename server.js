@@ -80,15 +80,21 @@ app.post('/api/process-audio', requireAuth, upload.single('audio'), async (req, 
     if (!audioFile || !projectId) return res.status(400).json({ success:false, error:'Audio oder Projekt-ID fehlt.' });
 
     const mimeType = (audioFile.mimetype && audioFile.mimetype !== 'application/octet-stream') ? audioFile.mimetype : 'audio/webm';
-    const prompt = `Du bist ein präziser KI-Assistent für Bausachverständige.
-Höre dir das Audio genau an und erstelle einen strukturierten Baumangel-Befund.
+    const prompt = `Du bist ein KI-Assistent für Bausachverständige. Deine Aufgabe ist NUR das Strukturieren des Gesagten – KEIN Hinzudichten.
+
+Strikte Regeln:
+- Verwende AUSSCHLIESSLICH Informationen, die im Audio tatsächlich genannt werden.
+- Erfinde KEINE Ursachen, Maßnahmen, Maße, Normen oder Dringlichkeiten dazu.
+- Wurde etwas nicht gesagt, schreibe wörtlich "Vom Gutachter zu prüfen".
+- Umgangssprache darfst du in sachliche Fachsprache überführen, den Inhalt aber NICHT erweitern.
+
 Gib AUSSCHLIESSLICH valides JSON in exakt diesem Format zurück (kein Markdown, keine weiteren Felder):
 {
-  "titel": "Kurzer Titel des Mangels (max. 6 Wörter)",
-  "befund": "Sachliche, fachlich präzise Beschreibung im Gutachter-Jargon",
-  "ursache": "Mutmaßliche Ursache (oder 'Noch zu prüfen')",
-  "dringlichkeit": "Hoch | Mittel | Niedrig",
-  "massnahme": "Konkrete, fachgerechte Sanierungsempfehlung"
+  "titel": "Kurzer Titel aus dem Gesagten (max. 6 Wörter)",
+  "befund": "Sachliche Wiedergabe NUR des Gesagten in Fachsprache",
+  "ursache": "Nur wenn genannt, sonst 'Vom Gutachter zu prüfen'",
+  "dringlichkeit": "Hoch | Mittel | Niedrig – nur wenn klar erkennbar, sonst 'Mittel'",
+  "massnahme": "Nur wenn genannt, sonst 'Vom Gutachter zu prüfen'"
 }`;
 
     const response = await ai.models.generateContent({
