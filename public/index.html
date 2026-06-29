@@ -1,162 +1,336 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GutachtAI - Mobiler Rekorder</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <style>
-        .pulse { animation: pulse-animation 1.5s infinite; }
-        @keyframes pulse-animation {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GutachtAI – Vom gesprochenen Wort zum fertigen Mängelprotokoll</title>
+<meta name="description" content="GutachtAI verwandelt die Sprachnotizen von Bausachverständigen direkt in ein professionelles Mängelprotokoll – mit KI-Strukturierung, Fotos und eigenem PDF-Design.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0B0A08; --panel:#15130E; --panel-2:#1D1A13; --elev:#211D15;
+    --line:#2A271D; --line-2:#211E16;
+    --amber:#E0922F; --amber-bright:#F4AB4E; --amber-deep:#B5701A; --gold:#E8B45C;
+    --text:#F6F2E9; --muted:#ABA392; --muted-2:#7E7666; --brick:#C0492B; --teal:#46A98F;
+    --paper:#FBFAF7;
+    --disp:'Archivo',system-ui,sans-serif; --body:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--body);background:var(--black);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+  .mono{font-family:var(--mono)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--amber);display:inline-flex;align-items:center;gap:10px}
+  .eyebrow::before{content:"";width:22px;height:1px;background:var(--amber)}
+
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .glow{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0}
+
+  header.nav{position:sticky;top:0;z-index:60;background:rgba(11,10,8,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .logo{font-family:var(--disp);font-weight:800;font-size:22px;letter-spacing:-.01em}
+  .logo b{color:var(--amber)}
+  .nav-links{display:flex;align-items:center;gap:30px;font-size:14.5px;color:var(--muted)}
+  .nav-links a:hover{color:var(--text)}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;padding:12px 22px;border-radius:11px;transition:.2s;cursor:pointer;border:1px solid transparent;white-space:nowrap}
+  .btn-amber{background:linear-gradient(135deg,var(--gold),var(--amber));color:#241808;box-shadow:0 10px 30px -10px rgba(224,146,47,.5)}
+  .btn-amber:hover{transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(224,146,47,.7)}
+  .btn-ghost{border-color:var(--line);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--amber);color:var(--amber-bright)}
+  .nav-toggle{display:none;background:none;border:0;color:var(--text);font-size:26px;cursor:pointer}
+
+  .hero{position:relative;padding:96px 0 70px;z-index:2}
+  .hero .glow{width:620px;height:620px;background:rgba(224,146,47,.16);top:-200px;right:-160px}
+  .hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:60px;align-items:center;position:relative}
+  .hero h1{font-family:var(--disp);font-weight:900;font-size:clamp(40px,5.6vw,70px);line-height:.98;letter-spacing:-.03em}
+  .hero h1 .am{background:linear-gradient(120deg,var(--gold),var(--amber-bright));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.lead{margin-top:26px;font-size:18.5px;color:var(--muted);max-width:31em}
+  .hero-cta{margin-top:36px;display:flex;gap:14px;flex-wrap:wrap}
+  .hero-stat{margin-top:46px;display:flex;gap:0;border-top:1px solid var(--line);padding-top:26px}
+  .hero-stat>div{padding-right:36px;margin-right:36px;border-right:1px solid var(--line)}
+  .hero-stat>div:last-child{border-right:0}
+  .hero-stat .n{font-family:var(--disp);font-weight:800;font-size:28px;color:var(--text)}
+  .hero-stat .l{font-size:12.5px;color:var(--muted-2);margin-top:2px}
+
+  .panel-wrap{position:relative;border-radius:22px;padding:1px;background:linear-gradient(160deg,rgba(244,171,78,.5),rgba(42,39,29,.2) 40%,rgba(42,39,29,.1))}
+  .panel{background:var(--panel);border-radius:21px;padding:26px}
+  .panel .tag{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-bright);margin-bottom:18px}
+  .tag .live{width:8px;height:8px;border-radius:50%;background:var(--brick);box-shadow:0 0 0 0 rgba(192,73,43,.6);animation:beat 1.6s infinite}
+  @keyframes beat{0%{box-shadow:0 0 0 0 rgba(192,73,43,.6)}70%{box-shadow:0 0 0 9px rgba(192,73,43,0)}100%{box-shadow:0 0 0 0 rgba(192,73,43,0)}}
+  .voice{display:flex;align-items:center;gap:15px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .eq{flex:none;display:flex;align-items:center;gap:3px;height:34px;width:46px;justify-content:center}
+  .eq i{width:4px;border-radius:2px;background:linear-gradient(var(--gold),var(--amber));animation:eq 1s ease-in-out infinite}
+  .eq i:nth-child(1){animation-delay:0s}.eq i:nth-child(2){animation-delay:.18s}.eq i:nth-child(3){animation-delay:.36s}.eq i:nth-child(4){animation-delay:.12s}.eq i:nth-child(5){animation-delay:.30s}
+  @keyframes eq{0%,100%{height:8px}50%{height:30px}}
+  .voice .said{font-size:14px;color:var(--muted);font-style:italic;line-height:1.45}
+  .arrow{display:flex;align-items:center;justify-content:center;gap:12px;color:var(--amber);font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;margin:16px 0}
+  .arrow .ln{height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--line))}
+  .arrow .ln.r{background:linear-gradient(90deg,var(--line),transparent)}
+  .befund{background:var(--paper);color:#23211D;border-radius:14px;padding:20px;box-shadow:0 28px 60px -28px rgba(0,0,0,.8)}
+  .befund .row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .befund .num{font-family:var(--mono);font-weight:600;font-size:12px;background:var(--amber);color:#241808;padding:3px 9px;border-radius:6px}
+  .befund .urg{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--brick)}
+  .befund h4{font-family:var(--disp);font-size:17px;font-weight:700;margin-bottom:10px}
+  .befund .fl{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#9A9488;margin-top:11px}
+  .befund .fv{font-size:13px;color:#46443d}
+
+  section{padding:100px 0;position:relative;z-index:2}
+  .sec-head{max-width:44ch}
+  .sec-head h2{font-family:var(--disp);font-weight:800;font-size:clamp(30px,4vw,46px);letter-spacing:-.025em;line-height:1.05;margin-top:18px}
+  p.sub{margin-top:16px;font-size:17.5px;color:var(--muted)}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:54px}
+  .step{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:34px 28px;overflow:hidden}
+  .step .ghost{position:absolute;top:-18px;right:6px;font-family:var(--disp);font-weight:900;font-size:130px;line-height:1;color:rgba(224,146,47,.07)}
+  .step .k{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);position:relative}
+  .step h3{font-family:var(--disp);font-size:21px;font-weight:700;margin:16px 0 9px;position:relative}
+  .step p{font-size:15px;color:var(--muted);position:relative}
+
+  .feat{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;margin-top:54px;align-items:stretch}
+  .feat-list{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .fcard{border:1px solid var(--line);border-radius:16px;padding:24px;background:var(--panel)}
+  .fcard .ic{font-size:22px}
+  .fcard h3{font-family:var(--disp);font-size:17px;font-weight:700;margin:13px 0 7px}
+  .fcard p{font-size:14px;color:var(--muted)}
+  .pdf-mock{border:1px solid var(--line);border-radius:16px;background:linear-gradient(165deg,var(--panel-2),var(--panel));padding:26px;display:flex;flex-direction:column;justify-content:space-between}
+  .pdf-mock .pm-h{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+  .pm-paper{background:var(--paper);color:#23211D;border-radius:10px;padding:20px;margin-top:16px;box-shadow:0 24px 50px -26px rgba(0,0,0,.8)}
+  .pm-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--amber);padding-bottom:12px;margin-bottom:12px}
+  .pm-logo{width:54px;height:24px;border-radius:4px;background:#23211D;display:grid;place-items:center;color:var(--gold);font-family:var(--disp);font-weight:800;font-size:11px}
+  .pm-co{text-align:right;font-size:9px;color:#7a766b;line-height:1.5}
+  .pm-co b{color:#23211D;font-size:11px}
+  .pm-title{font-family:var(--mono);font-size:8px;letter-spacing:.18em;color:var(--amber-deep)}
+  .pm-h2{font-family:var(--disp);font-weight:800;font-size:15px;margin:2px 0 10px}
+  .pm-line{display:flex;gap:8px;align-items:flex-start;margin-bottom:9px}
+  .pm-n{font-family:var(--mono);font-size:9px;font-weight:600;background:var(--amber);color:#241808;padding:1px 6px;border-radius:4px}
+  .pm-tx{flex:1}
+  .pm-tx .t{font-weight:600;font-size:11px}
+  .pm-tx .d{font-size:9px;color:#6a665c}
+  .pm-bar{height:5px;border-radius:3px;background:#ece7dc;margin-top:4px}
+  .pm-bar.s{width:70%}
+
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:54px;align-items:stretch}
+  .tier{border:1px solid var(--line);border-radius:20px;padding:32px;background:var(--panel);display:flex;flex-direction:column}
+  .tier.pop{background:linear-gradient(170deg,var(--elev),var(--panel));border:1px solid rgba(224,146,47,.55);box-shadow:0 30px 70px -36px rgba(224,146,47,.5);position:relative}
+  .tier .badge{position:absolute;top:-13px;left:32px;background:linear-gradient(135deg,var(--gold),var(--amber));color:#241808;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:5px 14px;border-radius:8px}
+  .tier .tname{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-bright)}
+  .tier .price{font-family:var(--disp);font-weight:800;font-size:46px;margin:16px 0 2px}
+  .tier .price span{font-size:16px;font-weight:500;color:var(--muted)}
+  .tier .for{font-size:14px;color:var(--muted);min-height:42px}
+  .tier ul{list-style:none;margin:24px 0;display:flex;flex-direction:column;gap:12px;flex:1}
+  .tier li{display:flex;gap:11px;font-size:14.5px;color:var(--text)}
+  .tier li::before{content:"\2192";color:var(--amber);font-family:var(--mono);flex:none}
+  .tier li.off{color:var(--muted-2)}
+  .tier li.off::before{content:"\2013";color:var(--muted-2)}
+  .tier .btn{width:100%;justify-content:center}
+  .btn-out{border-color:var(--line);color:var(--text)}
+  .btn-out:hover{border-color:var(--amber);color:var(--amber-bright)}
+  .price-note{margin-top:26px;font-size:13.5px;color:var(--muted-2);text-align:center}
+
+  .cta-band{position:relative;margin:0 28px;border-radius:28px;overflow:hidden;background:linear-gradient(130deg,#1a1610,#0f0d09);border:1px solid var(--line)}
+  .cta-band .glow{width:480px;height:480px;background:rgba(224,146,47,.22);bottom:-260px;left:50%;transform:translateX(-50%)}
+  .cta-in{position:relative;text-align:center;padding:80px 24px}
+  .cta-in h2{font-family:var(--disp);font-weight:800;font-size:clamp(30px,4vw,46px);letter-spacing:-.02em}
+  .cta-in p{margin:16px auto 30px;max-width:36ch;font-size:18px;color:var(--muted)}
+
+  footer{border-top:1px solid var(--line);padding:44px 0;color:var(--muted-2);position:relative;z-index:2}
+  .foot-in{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;font-size:13.5px}
+  footer a:hover{color:var(--amber-bright)}
+
+  .reveal{opacity:0;transform:translateY(18px);transition:.8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:920px){
+    .hero-grid,.steps,.feat,.feat-list,.tiers{grid-template-columns:1fr}
+    .nav-links{display:none}.nav-toggle{display:block}
+    .nav-links.open{display:flex;position:absolute;top:72px;left:0;right:0;background:var(--panel);flex-direction:column;padding:20px 28px;gap:18px;border-bottom:1px solid var(--line)}
+    .hero{padding:56px 0 44px}.hero-stat{flex-wrap:wrap;gap:18px 0}.hero-stat>div{border-right:0;padding-right:24px;margin-right:24px}
+    section{padding:72px 0}
+  }
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}.eq i,.tag .live{animation:none}.eq i{height:18px}}
+</style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between p-4">
+<body>
 
-    <header class="text-center py-4">
-        <h1 class="text-3xl font-black tracking-wider text-blue-400">GutachtAI</h1>
-        <p class="text-xs text-slate-400 mt-1">Mängelaufnahme &amp; KI-Strukturierung</p>
-    </header>
+<header class="nav">
+  <div class="wrap nav-in">
+    <div class="logo">Gutacht<b>AI</b></div>
+    <nav class="nav-links" id="navLinks">
+      <a href="#ablauf">Ablauf</a>
+      <a href="#funktionen">Funktionen</a>
+      <a href="#preise">Preise</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/app" class="btn btn-amber">Aufnahme starten</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Menü">☰</button>
+  </div>
+</header>
 
-    <main class="max-w-md w-full mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-2xl">
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Projekt-ID / Name</label>
-                <input type="text" id="projectId" value="" placeholder="z.B. neubau-stuttgart" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-blue-500 font-mono">
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Bauteil / Bereich (z.B. Keller, OG Bad)</label>
-                <input type="text" id="roomOrSection" placeholder="z.B. Wohnzimmer EG" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-blue-500">
-            </div>
+<section class="hero">
+  <div class="glow"></div>
+  <div class="wrap hero-grid">
+    <div class="reveal">
+      <span class="eyebrow">Für Bausachverständige</span>
+      <h1>Sprich den Mangel.<br>Den <span class="am">Bericht</span><br>schreibt die KI.</h1>
+      <p class="lead">Auf der Baustelle einsprechen, Foto dazu – GutachtAI macht daraus einen sauber strukturierten Befund und am Ende dein fertiges Mängelprotokoll als PDF. Mit deinem Logo, deinem Briefkopf.</p>
+      <div class="hero-cta">
+        <a href="/app" class="btn btn-amber">Kostenlos ausprobieren</a>
+        <a href="#ablauf" class="btn btn-ghost">So funktioniert's</a>
+      </div>
+      <div class="hero-stat">
+        <div><div class="n">~70%</div><div class="l">weniger Tippzeit</div></div>
+        <div><div class="n">1 Tap</div><div class="l">vom Befund zum PDF</div></div>
+        <div><div class="n">DSGVO</div><div class="l">Hosting in Deutschland</div></div>
+      </div>
+    </div>
+
+    <div class="panel-wrap reveal">
+      <div class="panel">
+        <div class="tag"><span class="live"></span>Live-Prinzip</div>
+        <div class="voice">
+          <div class="eq"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="said">„Im Keller an der Nordwand feuchter Fleck, ca. 40 cm, leichte Salzausblühungen…"</div>
         </div>
-
-        <div class="flex flex-col items-center justify-center py-6 space-y-3">
-            <button id="recordBtn" class="w-24 h-24 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-3xl shadow-lg transition-all active:scale-95 cursor-pointer">🎤</button>
-            <p id="statusText" class="text-sm font-medium text-slate-400">Bereit zur Aufnahme</p>
-            <div id="timer" class="text-xs font-mono text-slate-500 hidden">00:00</div>
+        <div class="arrow"><span class="ln"></span>KI strukturiert<span class="ln r"></span></div>
+        <div class="befund">
+          <div class="row1"><span class="num">01</span><span class="urg">DRINGLICHKEIT: HOCH</span></div>
+          <h4>Feuchteschaden Kelleraußenwand</h4>
+          <div class="fl">Befund</div>
+          <div class="fv">Durchfeuchtung der erdberührten Nordwand mit beginnender Salzausblühung über ca. 40 cm Höhe.</div>
+          <div class="fl">Maßnahme</div>
+          <div class="fv">Abdichtung prüfen, Horizontalsperre und Sanierputz nach WTA-Merkblatt.</div>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-        <div id="responseContainer" class="hidden border rounded-xl p-4 text-sm">
-            <p id="responseText"></p>
+<section id="ablauf">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">In drei Schritten</span>
+      <h2>Von der Begehung zum Protokoll.</h2>
+      <p class="sub">Kein Notizblock, kein Diktiergerät, kein Abtippen am Abend.</p>
+    </div>
+    <div class="steps reveal">
+      <div class="step"><span class="ghost">1</span><div class="k">Begehen</div><h3>Einsprechen &amp; fotografieren</h3><p>Bauteil wählen, Mangel einsprechen, Foto schießen. Beliebig viele Befunde – alle landen automatisch im selben Projekt.</p></div>
+      <div class="step"><span class="ghost">2</span><div class="k">Strukturieren</div><h3>KI macht den Befund</h3><p>Die KI formt aus deinem gesprochenen Wort einen fachlich präzisen Befund mit Ursache, Dringlichkeit und Maßnahme.</p></div>
+      <div class="step"><span class="ghost">3</span><div class="k">Ausgeben</div><h3>Prüfen &amp; PDF erstellen</h3><p>Im Dashboard überfliegen, nachschärfen, fertig. Ein Klick erzeugt dein Protokoll-PDF in deinem Design.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="funktionen">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Funktionen</span>
+      <h2>Gebaut für den Alltag<br>auf der Baustelle.</h2>
+    </div>
+    <div class="feat reveal">
+      <div class="feat-list">
+        <div class="fcard"><div class="ic">🎙️</div><h3>Sprache statt Tippen</h3><p>Freihändig erfassen, direkt am Objekt.</p></div>
+        <div class="fcard"><div class="ic">📷</div><h3>Fotos pro Befund</h3><p>Beweisbilder landen automatisch im Protokoll.</p></div>
+        <div class="fcard"><div class="ic">🗂️</div><h3>Alles ein Projekt</h3><p>Mehrere Aufnahmen, intelligent gebündelt.</p></div>
+        <div class="fcard"><div class="ic">✏️</div><h3>Volle Kontrolle</h3><p>Jeder KI-Text bleibt frei editierbar.</p></div>
+      </div>
+      <div class="pdf-mock">
+        <div class="pm-h">Dein Protokoll · dein Design</div>
+        <div class="pm-paper">
+          <div class="pm-top">
+            <div class="pm-logo">LOGO</div>
+            <div class="pm-co"><b>Sachverständigenbüro</b><br>Musterstr. 7 · Pforzheim<br>info@buero.de</div>
+          </div>
+          <div class="pm-title">MÄNGELPROTOKOLL</div>
+          <div class="pm-h2">Neubau Stuttgart</div>
+          <div class="pm-line"><span class="pm-n">01</span><div class="pm-tx"><div class="t">Feuchteschaden Keller</div><div class="d">Nordwand · Dringlichkeit hoch</div><div class="pm-bar"></div><div class="pm-bar s"></div></div></div>
+          <div class="pm-line"><span class="pm-n">02</span><div class="pm-tx"><div class="t">Rissbildung Decke OG</div><div class="d">Wohnzimmer · Dringlichkeit mittel</div><div class="pm-bar"></div><div class="pm-bar s"></div></div></div>
         </div>
-    </main>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <footer class="text-center text-[10px] text-slate-600 py-2">GutachtAI · läuft auf eurem Server</footer>
+<section id="preise">
+  <div class="wrap">
+    <div class="sec-head reveal" style="max-width:none;text-align:center">
+      <span class="eyebrow" style="justify-content:center">Tarife</span>
+      <h2>Ein Preis, der sich nach<br>der ersten Begehung rechnet.</h2>
+    </div>
+    <div class="tiers reveal">
+      <div class="tier">
+        <div class="tname">Starter</div>
+        <div class="price">19€ <span>/ Monat</span></div>
+        <div class="for">Für den Einzelgutachter, der einsteigen will.</div>
+        <ul>
+          <li>Bis 5 Projekte / Monat</li>
+          <li>Sprache → KI-Befund</li>
+          <li>Standard-Protokoll mit deinem Logo</li>
+          <li>Verlauf 3 Monate</li>
+          <li class="off">Fotos pro Befund</li>
+          <li class="off">Frei anpassbares PDF</li>
+        </ul>
+        <a href="/app" class="btn btn-out">Starter wählen</a>
+      </div>
+      <div class="tier pop">
+        <span class="badge">Empfohlen</span>
+        <div class="tname">Professional</div>
+        <div class="price">49€ <span>/ Monat</span></div>
+        <div class="for">Für Vielnutzer, die professionelle Berichte abliefern.</div>
+        <ul>
+          <li>Unbegrenzte Projekte</li>
+          <li>Sprache → KI-Befund</li>
+          <li><strong>Fotos pro Befund</strong></li>
+          <li><strong>Voll anpassbares PDF</strong> (Logo, Farben, Briefkopf)</li>
+          <li>Unbegrenzter Verlauf</li>
+          <li>Bevorzugter Support</li>
+        </ul>
+        <a href="/app" class="btn btn-amber">Professional wählen</a>
+      </div>
+      <div class="tier">
+        <div class="tname">Kanzlei</div>
+        <div class="price">129€ <span>/ Monat</span></div>
+        <div class="for">Für Büros mit mehreren Gutachtern.</div>
+        <ul>
+          <li>Alles aus Professional</li>
+          <li>Mehrere Benutzer (Team)</li>
+          <li>Gemeinsame Projekt-Ablage</li>
+          <li>Onboarding inklusive</li>
+          <li>Priorisierter Support</li>
+        </ul>
+        <a href="/app" class="btn btn-out">Kanzlei anfragen</a>
+      </div>
+    </div>
+    <p class="price-note">Alle Preise zzgl. USt. · Monatlich kündbar · Ein gesparter Bericht zahlt das Abo.</p>
+  </div>
+</section>
 
-    <script>
-        // Gleiche Origin -> kein hardcoded IP, kein CORS, kein Mixed-Content (http/https) Problem.
-        const BACKEND_URL = "";
-        const TEST_USER_ID = "00000000-0000-0000-0000-000000000000";
+<section style="padding-top:0">
+  <div class="cta-band">
+    <div class="glow"></div>
+    <div class="cta-in reveal">
+      <h2>Die nächste Begehung dauert halb so lang.</h2>
+      <p>Probier's mit einem echten Mangel aus – ohne Anmeldung, direkt im Browser.</p>
+      <a href="/app" class="btn btn-amber">Jetzt Aufnahme starten</a>
+    </div>
+  </div>
+</section>
 
-        let mediaRecorder, audioChunks = [], isRecording = false, timerInterval, seconds = 0, recMime = "audio/webm";
+<footer>
+  <div class="wrap foot-in">
+    <div class="logo">Gutacht<b>AI</b></div>
+    <div>© 2026 GutachtAI · <a href="/dashboard">Dashboard</a> · <a href="/app">Aufnahme</a></div>
+  </div>
+</footer>
 
-        const recordBtn = document.getElementById('recordBtn');
-        const statusText = document.getElementById('statusText');
-        const timerDisplay = document.getElementById('timer');
-        const responseContainer = document.getElementById('responseContainer');
-        const responseText = document.getElementById('responseText');
-
-        // Projekt-ID merken (localStorage), damit man sie nicht jedes Mal tippt
-        const projInput = document.getElementById('projectId');
-        projInput.value = localStorage.getItem('gutachtai_project') || "";
-        projInput.addEventListener('change', () => localStorage.setItem('gutachtai_project', projInput.value.trim()));
-
-        // Vom Browser unterstütztes Aufnahmeformat wählen (Gemini frisst webm/ogg/mp4)
-        function pickMime() {
-            const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
-            for (const c of candidates) {
-                if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) return c;
-            }
-            return "";
-        }
-
-        recordBtn.addEventListener('click', async () => {
-            if (!isRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const chosen = pickMime();
-                    mediaRecorder = chosen ? new MediaRecorder(stream, { mimeType: chosen }) : new MediaRecorder(stream);
-                    recMime = mediaRecorder.mimeType || chosen || "audio/webm";
-                    audioChunks = [];
-
-                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-                    mediaRecorder.onstop = async () => {
-                        const baseMime = recMime.split(';')[0]; // "audio/webm;codecs=opus" -> "audio/webm"
-                        const audioBlob = new Blob(audioChunks, { type: baseMime });
-                        await sendAudioToServer(audioBlob, baseMime);
-                    };
-
-                    mediaRecorder.start();
-                    isRecording = true;
-                    recordBtn.innerText = "🛑";
-                    recordBtn.classList.add('pulse');
-                    statusText.innerText = "Ich höre zu... Sprechen Sie jetzt.";
-                    statusText.classList.remove('text-slate-400'); statusText.classList.add('text-red-400');
-
-                    seconds = 0; timerDisplay.classList.remove('hidden');
-                    timerInterval = setInterval(() => {
-                        seconds++;
-                        const m = String(Math.floor(seconds / 60)).padStart(2, '0');
-                        const s = String(seconds % 60).padStart(2, '0');
-                        timerDisplay.innerText = `${m}:${s}`;
-                    }, 1000);
-                } catch (err) {
-                    alert('Mikrofon-Zugriff verweigert oder nicht verfügbar!');
-                    console.error(err);
-                }
-            } else {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(t => t.stop());
-                isRecording = false;
-                recordBtn.innerText = "🎤"; recordBtn.classList.remove('pulse');
-                statusText.innerText = "Übertrage an KI...";
-                statusText.classList.remove('text-red-400'); statusText.classList.add('text-blue-400');
-                clearInterval(timerInterval); timerDisplay.classList.add('hidden');
-            }
-        });
-
-        async function sendAudioToServer(blob, mime) {
-            const projectId = projInput.value.trim();
-            const roomOrSection = document.getElementById('roomOrSection').value;
-
-            if (!projectId) {
-                alert('Bitte gib eine Projekt-ID an!');
-                statusText.innerText = "Bereit zur Aufnahme";
-                return;
-            }
-
-            const ext = mime.includes('ogg') ? 'ogg' : mime.includes('mp4') ? 'm4a' : 'webm';
-            const formData = new FormData();
-            formData.append('audio', blob, 'aufnahme.' + ext);
-            formData.append('projectId', projectId);
-            formData.append('userId', TEST_USER_ID);
-            formData.append('roomOrSection', roomOrSection || 'Allgemein');
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/process-audio`, { method: 'POST', body: formData });
-                const result = await response.json();
-                responseContainer.classList.remove('hidden');
-
-                if (result.success) {
-                    responseContainer.className = "border-emerald-800 bg-emerald-950/50 rounded-xl p-4 text-sm text-emerald-400";
-                    responseText.innerText = "✅ Befund erfolgreich übermittelt und strukturiert!";
-                    statusText.innerText = "Erfolgreich gesendet!"; statusText.className = "text-sm font-medium text-emerald-400";
-                    document.getElementById('roomOrSection').value = '';
-                } else {
-                    responseContainer.className = "border-red-800 bg-red-950/50 rounded-xl p-4 text-sm text-red-400";
-                    responseText.innerText = "❌ Fehler: " + (result.error || "Unbekannt");
-                    statusText.innerText = "Fehler beim Senden"; statusText.className = "text-sm font-medium text-red-400";
-                }
-            } catch (error) {
-                responseContainer.classList.remove('hidden');
-                responseContainer.className = "border-red-800 bg-red-950/50 rounded-xl p-4 text-sm text-red-400";
-                responseText.innerText = "❌ Netzwerkfehler – erreicht der Server die API?";
-                console.error(error);
-            }
-        }
-    </script>
+<script>
+  const t=document.getElementById('navToggle'),n=document.getElementById('navLinks');
+  t.addEventListener('click',()=>n.classList.toggle('open'));
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
 </body>
 </html>

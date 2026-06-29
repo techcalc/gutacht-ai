@@ -1,187 +1,324 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GutachtAI - Desktop Zentrale</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GutachtAI – Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1B19;--paper:#FBFAF7;--paper-2:#F3F0E8;--card:#FFFFFF;
+    --amber:#E0922F;--amber-deep:#B5701A;--teal:#2F6F62;--brick:#C0492B;
+    --muted:#7A756A;--line:#E7E3D9;--line-2:#EFECE3;
+    --disp:'Archivo',sans-serif;--body:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--body);background:var(--paper);color:var(--ink);display:flex;min-height:100vh;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .mono{font-family:var(--mono)}
+
+  /* SIDEBAR */
+  aside{width:248px;flex:none;background:var(--ink);color:var(--paper);display:flex;flex-direction:column;justify-content:space-between;position:sticky;top:0;height:100vh}
+  .side-top{padding:24px 22px}
+  .logo{font-family:var(--disp);font-weight:800;font-size:20px}.logo b{color:var(--amber)}
+  .side-sub{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#8C877C;margin-top:4px}
+  nav.side{margin-top:30px;display:flex;flex-direction:column;gap:4px}
+  nav.side a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;font-size:14.5px;color:#C9C4B8;cursor:pointer}
+  nav.side a:hover{background:#2A2722;color:#fff}
+  nav.side a.active{background:#2A2722;color:#fff;box-shadow:inset 3px 0 0 var(--amber)}
+  .side-bot{padding:22px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:14px;padding:11px 16px;border-radius:9px;cursor:pointer;border:1px solid transparent;transition:.16s;font-family:var(--body)}
+  .btn-amber{background:var(--amber);color:#231a09}.btn-amber:hover{background:#efa53f}
+  .btn-amber.full{width:100%}
+  .btn-ink{background:var(--ink);color:var(--paper)}.btn-ink:hover{background:#36332c}
+  .btn-out{border-color:var(--line);color:var(--ink);background:#fff}.btn-out:hover{border-color:var(--amber);color:var(--amber-deep)}
+  .btn-danger{border-color:#e7c9c1;color:var(--brick);background:#fff}.btn-danger:hover{background:#fbeeea}
+
+  /* MAIN */
+  main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#fff}
+  .topbar h1{font-family:var(--disp);font-weight:700;font-size:19px}
+  .topbar .crumb{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+  .content{padding:28px;flex:1;overflow:auto}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber-deep)}
+
+  /* PROJEKTE GRID */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:16px;margin-top:18px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;cursor:pointer;transition:.16s}
+  .pcard:hover{border-color:var(--amber);transform:translateY(-2px);box-shadow:0 16px 34px -24px rgba(0,0,0,.4)}
+  .pcard .pname{font-family:var(--disp);font-weight:700;font-size:17px;margin-bottom:10px}
+  .pcard .pmeta{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
+  .pcard .cnt{font-family:var(--mono);font-weight:600;color:var(--amber-deep)}
+  .empty{text-align:center;padding:70px 20px;color:var(--muted)}
+  .empty .big{font-size:34px;margin-bottom:12px}
+
+  /* PROJECT DETAIL */
+  .split{display:grid;grid-template-columns:330px 1fr;gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;min-height:60vh}
+  .blist{border-right:1px solid var(--line);overflow:auto;padding:14px}
+  .blist .lh{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:6px 6px 12px;display:flex;justify-content:space-between}
+  .bitem{display:flex;gap:11px;padding:12px 12px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+  .bitem:hover{background:var(--paper-2)}
+  .bitem.sel{background:var(--paper-2);border-color:var(--line)}
+  .bitem .n{font-family:var(--mono);font-weight:600;font-size:11px;background:var(--amber);color:#231a09;padding:2px 7px;border-radius:5px;height:fit-content;flex:none}
+  .bitem .t{font-weight:600;font-size:14px}
+  .bitem .s{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .editor{padding:24px;overflow:auto}
+  .editor .ph{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center}
+  fieldset{border:0;margin-bottom:16px}
+  label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  input[type=text],textarea,select{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px 12px;font-family:var(--body);font-size:14.5px;color:var(--ink)}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--amber)}
+  textarea{resize:vertical}
+  .ed-photos{display:flex;flex-wrap:wrap;gap:8px}
+  .ed-photos img{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+  .ed-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;border-top:1px solid var(--line-2);padding-top:16px}
+  .savestate{font-size:12.5px;color:var(--teal);font-weight:500}
+
+  /* PROFILE */
+  .form-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;max-width:760px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .form-grid .full{grid-column:1/-1}
+  .logo-up{display:flex;align-items:center;gap:18px;margin-bottom:8px}
+  .logo-prev{width:120px;height:64px;border:1px dashed var(--line);border-radius:10px;display:grid;place-items:center;background:var(--paper);overflow:hidden;color:var(--muted);font-size:11px;text-align:center}
+  .logo-prev img{max-width:100%;max-height:100%;object-fit:contain}
+  .accent-row{display:flex;align-items:center;gap:12px}
+  input[type=color]{width:48px;height:38px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;padding:3px}
+  .note{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  .hidden{display:none!important}
+  @media(max-width:860px){aside{display:none}.split{grid-template-columns:1fr}.blist{border-right:0;border-bottom:1px solid var(--line);max-height:240px}.form-grid{grid-template-columns:1fr}}
+</style>
 </head>
-<body class="bg-slate-100 font-sans min-h-screen flex">
+<body>
 
-    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between hidden md:flex">
-        <div class="p-6">
-            <h1 class="text-2xl font-bold tracking-wider text-blue-400">GutachtAI</h1>
-            <p class="text-xs text-slate-400 mb-8">Büro-Zentrale v1.0</p>
-            <nav class="space-y-2">
-                <a href="#" class="block bg-slate-800 text-white px-4 py-2 rounded-lg font-medium transition-colors">📂 Projekte</a>
-                <a href="/" class="block text-slate-400 hover:bg-slate-800 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors">📱 Mobiler Rekorder</a>
-            </nav>
+<aside>
+  <div class="side-top">
+    <a href="/" class="logo">Gutacht<b>AI</b></a>
+    <div class="side-sub">Büro-Zentrale</div>
+    <nav class="side">
+      <a id="navProjects" class="active" onclick="showProjects()">🗂️ Projekte</a>
+      <a id="navProfile" onclick="showProfile()">🏢 Profil &amp; Logo</a>
+    </nav>
+  </div>
+  <div class="side-bot">
+    <a href="/app" class="btn btn-amber full">🎤 Aufnahme öffnen</a>
+  </div>
+</aside>
+
+<main>
+  <div class="topbar">
+    <div>
+      <div class="crumb" id="crumb">Projekte</div>
+      <h1 id="pageTitle">Deine Projekte</h1>
+    </div>
+    <div id="topActions"></div>
+  </div>
+
+  <div class="content">
+    <!-- VIEW: PROJEKTE -->
+    <section id="viewProjects">
+      <span class="eyebrow">Übersicht</span>
+      <div id="projectsGrid" class="grid"></div>
+    </section>
+
+    <!-- VIEW: PROJEKT-DETAIL -->
+    <section id="viewProject" class="hidden">
+      <div class="split">
+        <div class="blist">
+          <div class="lh"><span>Befunde</span><span id="bCount" class="mono"></span></div>
+          <div id="befundList"></div>
         </div>
-        <div class="p-6 text-xs text-slate-500 border-t border-slate-800">&copy; 2026 GutachtAI</div>
-    </aside>
-
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        <header class="bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm gap-4">
-            <div class="flex-1">
-                <h2 class="text-lg font-bold text-slate-800">Projekt-Befunde</h2>
-                <div class="flex items-center gap-2 mt-1">
-                    <input type="text" id="projectIdInput" placeholder="Projekt-ID eingeben…" class="text-xs border border-slate-300 rounded px-2 py-1 font-mono w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="loadProjectBtn" class="text-xs bg-slate-800 text-white px-3 py-1 rounded hover:bg-slate-700">Laden</button>
-                </div>
+        <div class="editor" id="editorWrap">
+          <div class="ph" id="editorPh"><div style="font-size:30px;margin-bottom:8px">👈</div>Wähle links einen Befund<br>zum Bearbeiten.</div>
+          <div id="editorForm" class="hidden">
+            <input type="hidden" id="edId">
+            <fieldset><label>Bauteil / Bereich</label><input type="text" id="edRoom"></fieldset>
+            <fieldset><label>Titel</label><input type="text" id="edTitel"></fieldset>
+            <fieldset><label>Mangelbeschreibung (Befund)</label><textarea id="edBefund" rows="4"></textarea></fieldset>
+            <fieldset><label>Ursache</label><textarea id="edUrsache" rows="2"></textarea></fieldset>
+            <fieldset><label>Empfohlene Maßnahme</label><textarea id="edMassnahme" rows="2"></textarea></fieldset>
+            <fieldset><label>Dringlichkeit</label><select id="edDring"><option>Hoch</option><option selected>Mittel</option><option>Niedrig</option></select></fieldset>
+            <fieldset id="edPhotosWrap" class="hidden"><label>Fotos</label><div class="ed-photos" id="edPhotos"></div></fieldset>
+            <div class="ed-actions">
+              <button class="btn btn-danger" onclick="deleteBefund()">Löschen</button>
+              <div style="display:flex;align-items:center;gap:14px">
+                <span class="savestate" id="saveState"></span>
+                <button class="btn btn-ink" onclick="saveBefund()">Änderungen speichern</button>
+              </div>
             </div>
-            <button id="downloadPdfBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center space-x-2 transition-all active:scale-95">
-                <span>🖨️</span><span>White-Label PDF</span>
-            </button>
-        </header>
-
-        <div class="flex-1 flex overflow-hidden">
-            <div class="w-1/3 border-r border-slate-200 bg-white overflow-y-auto p-4 space-y-3">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Erfasste KI-Befunde</h3>
-                    <button id="refreshBtn" class="text-xs text-blue-600 hover:underline">🔄 Aktualisieren</button>
-                </div>
-                <div id="reportsList" class="space-y-3">
-                    <p class="text-xs text-slate-400 text-center py-4">Projekt-ID eingeben und „Laden“ klicken.</p>
-                </div>
-            </div>
-
-            <div class="w-2/3 bg-slate-50 overflow-y-auto p-6">
-                <div id="editorCard" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4 hidden">
-                    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2">Befund bearbeiten</h3>
-                    <input type="hidden" id="editReportId">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">Bauteil / Bereich</label>
-                        <input type="text" id="editRoom" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">Mangelbeschreibung (Fachjargon)</label>
-                        <textarea id="editBefund" rows="5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">Ursache</label>
-                        <textarea id="editUrsache" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">Empfohlene Sanierungsmaßnahme</label>
-                        <textarea id="editMassnahme" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">Dringlichkeit</label>
-                        <select id="editDringlichkeit" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option>Hoch</option><option selected>Mittel</option><option>Niedrig</option>
-                        </select>
-                    </div>
-                    <div class="flex justify-between items-center pt-2">
-                        <span id="saveStatus" class="text-xs font-medium text-emerald-600"></span>
-                        <button id="saveBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg shadow-sm transition-all text-sm active:scale-95">💾 In DB speichern</button>
-                    </div>
-                </div>
-
-                <div id="editorPlaceholder" class="h-full flex flex-col items-center justify-center text-slate-400">
-                    <span class="text-4xl mb-2">👈</span>
-                    <p class="text-sm">Wähle links einen Befund aus, um ihn zu bearbeiten.</p>
-                </div>
-            </div>
+          </div>
         </div>
-    </main>
+      </div>
+    </section>
 
-    <script>
-        const BACKEND_URL = ""; // gleiche Origin
+    <!-- VIEW: PROFIL -->
+    <section id="viewProfile" class="hidden">
+      <span class="eyebrow">Erscheint auf jedem Protokoll-PDF</span>
+      <div class="form-card" style="margin-top:16px">
+        <fieldset>
+          <label>Logo</label>
+          <div class="logo-up">
+            <div class="logo-prev" id="logoPrev">Kein Logo</div>
+            <div>
+              <button class="btn btn-out" onclick="document.getElementById('logoInput').click()">Logo hochladen</button>
+              <button class="btn btn-out" id="logoRemove" onclick="removeLogo()" style="margin-left:8px">Entfernen</button>
+              <input type="file" id="logoInput" accept="image/*" style="display:none">
+              <div class="note">PNG mit transparentem Hintergrund sieht am besten aus.</div>
+            </div>
+          </div>
+        </fieldset>
+        <div class="form-grid">
+          <fieldset><label>Firmenname / Büro</label><input type="text" id="sCompany" placeholder="Sachverständigenbüro Mustermann"></fieldset>
+          <fieldset><label>Gutachter (Name)</label><input type="text" id="sName" placeholder="Dipl.-Ing. Max Mustermann"></fieldset>
+          <fieldset class="full"><label>Adresse</label><input type="text" id="sAddress" placeholder="Musterstraße 7, 75173 Pforzheim"></fieldset>
+          <fieldset><label>Telefon</label><input type="text" id="sPhone"></fieldset>
+          <fieldset><label>E-Mail</label><input type="text" id="sEmail"></fieldset>
+          <fieldset><label>Webseite</label><input type="text" id="sWebsite"></fieldset>
+          <fieldset><label>Akzentfarbe (PDF)</label><div class="accent-row"><input type="color" id="sAccent" value="#E0922F"><span class="mono" id="accentHex">#E0922F</span></div></fieldset>
+          <fieldset class="full"><label>Fußzeile (optional)</label><input type="text" id="sFooter" placeholder="z.B. öffentlich bestellter & vereidigter Sachverständiger"></fieldset>
+        </div>
+        <div class="ed-actions">
+          <span class="savestate" id="profileState"></span>
+          <button class="btn btn-amber" onclick="saveProfile()">Profil speichern</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
 
-        const projectInput = document.getElementById('projectIdInput');
-        // Projekt-ID aus URL (?projectId=) oder localStorage vorbelegen
-        const urlProj = new URLSearchParams(location.search).get('projectId');
-        projectInput.value = urlProj || localStorage.getItem('gutachtai_project') || "";
+<script>
+  const BACKEND="";
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  let befunde=[],curProject=null,curProjectName="";
 
-        function currentProject() { return projectInput.value.trim(); }
+  // ---------- VIEW SWITCH ----------
+  function setNav(a){['navProjects','navProfile'].forEach(i=>$(i).classList.remove('active'));$(a).classList.add('active');}
+  function hideAll(){['viewProjects','viewProject','viewProfile'].forEach(i=>$(i).classList.add('hidden'));}
 
-        document.getElementById('loadProjectBtn').addEventListener('click', () => {
-            localStorage.setItem('gutachtai_project', currentProject());
-            loadReports();
+  function showProjects(){
+    hideAll();setNav('navProjects');$('viewProjects').classList.remove('hidden');
+    $('crumb').innerText='Projekte';$('pageTitle').innerText='Deine Projekte';$('topActions').innerHTML='';
+    loadProjects();
+  }
+  function showProfile(){
+    hideAll();setNav('navProfile');$('viewProfile').classList.remove('hidden');
+    $('crumb').innerText='Einstellungen';$('pageTitle').innerText='Profil & Logo';$('topActions').innerHTML='';
+    loadProfile();
+  }
+  function showProject(id,name){
+    hideAll();setNav('navProjects');$('viewProject').classList.remove('hidden');
+    curProject=id;curProjectName=name;
+    $('crumb').innerText='Projekt';$('pageTitle').innerText=name;
+    $('topActions').innerHTML=
+      '<a href="/app?projectId='+encodeURIComponent(id)+'&projectName='+encodeURIComponent(name)+'" class="btn btn-out" style="margin-right:8px">🎤 Aufnahme</a>'+
+      '<button class="btn btn-amber" onclick="downloadPdf()">🧾 PDF erstellen</button>';
+    resetEditor();loadBefunde(id);
+  }
+
+  // ---------- PROJEKTE ----------
+  async function loadProjects(){
+    const g=$('projectsGrid');g.innerHTML='<p style="color:var(--muted)">Lade…</p>';
+    try{
+      const r=await fetch(BACKEND+'/api/projects');const res=await r.json();
+      if(res.success&&res.data.length){
+        g.innerHTML='';
+        res.data.forEach(p=>{
+          const d=document.createElement('div');d.className='pcard';
+          d.onclick=()=>showProject(p.project_id,p.project_name);
+          d.innerHTML='<div class="pname">'+esc(p.project_name)+'</div><div class="pmeta"><span class="cnt">'+p.count+' Befund(e)</span><span>'+new Date(p.last).toLocaleDateString('de-DE')+'</span></div>';
+          g.appendChild(d);
         });
-        document.getElementById('refreshBtn').addEventListener('click', loadReports);
-        if (currentProject()) loadReports();
+      }else if(res.success){
+        g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="big">🗂️</div>Noch keine Projekte.<br>Starte deine erste Aufnahme.<br><br><a href="/app" class="btn btn-amber">🎤 Aufnahme öffnen</a></div>';
+      }else{g.innerHTML='<p style="color:var(--brick)">'+esc(res.error)+'</p>';}
+    }catch(e){g.innerHTML='<p style="color:var(--brick)">Fehler beim Laden.</p>';}
+  }
 
-        document.getElementById('downloadPdfBtn').addEventListener('click', () => {
-            if (!currentProject()) return alert('Bitte zuerst eine Projekt-ID laden.');
-            window.location.href = `${BACKEND_URL}/api/generate-pdf?projectId=${encodeURIComponent(currentProject())}`;
-        });
+  // ---------- BEFUNDE ----------
+  async function loadBefunde(id){
+    const l=$('befundList');l.innerHTML='<p style="color:var(--muted);padding:10px">Lade…</p>';
+    try{
+      const r=await fetch(BACKEND+'/api/reports?projectId='+encodeURIComponent(id));const res=await r.json();
+      befunde=res.data||[];$('bCount').innerText=befunde.length;
+      if(!befunde.length){l.innerHTML='<p style="color:var(--muted);padding:10px;font-size:13px">Noch keine Befunde.</p>';return;}
+      l.innerHTML='';
+      befunde.forEach((b,i)=>{
+        const c=b.structured_content||{};const col=c.dringlichkeit==='Hoch'?'var(--brick)':c.dringlichkeit==='Niedrig'?'var(--teal)':'var(--amber)';
+        const d=document.createElement('div');d.className='bitem';d.dataset.i=i;d.onclick=()=>openBefund(i);
+        d.innerHTML='<span class="n">'+String(i+1).padStart(2,'0')+'</span><div><div class="t">'+esc(c.titel||b.room_or_section||'Befund')+'</div><div class="s"><span class="dot" style="background:'+col+'"></span>'+esc(b.room_or_section||'Allgemein')+(b.photos&&b.photos.length?' · 📷'+b.photos.length:'')+'</div></div>';
+        l.appendChild(d);
+      });
+    }catch(e){l.innerHTML='<p style="color:var(--brick);padding:10px">Fehler.</p>';}
+  }
+  function resetEditor(){$('editorPh').classList.remove('hidden');$('editorForm').classList.add('hidden');}
+  function openBefund(i){
+    document.querySelectorAll('.bitem').forEach(x=>x.classList.remove('sel'));
+    const el=document.querySelector('.bitem[data-i="'+i+'"]');if(el)el.classList.add('sel');
+    const b=befunde[i],c=b.structured_content||{};
+    $('editorPh').classList.add('hidden');$('editorForm').classList.remove('hidden');
+    $('edId').value=b.id;$('edRoom').value=b.room_or_section||'';$('edTitel').value=c.titel||'';
+    $('edBefund').value=c.befund||'';$('edUrsache').value=c.ursache||'';$('edMassnahme').value=c.massnahme||'';
+    $('edDring').value=c.dringlichkeit||'Mittel';$('saveState').innerText='';
+    const ph=Array.isArray(b.photos)?b.photos:[];
+    if(ph.length){$('edPhotosWrap').classList.remove('hidden');$('edPhotos').innerHTML=ph.map(p=>'<img src="'+p+'">').join('');}
+    else{$('edPhotosWrap').classList.add('hidden');$('edPhotos').innerHTML='';}
+  }
+  async function saveBefund(){
+    const payload={id:$('edId').value,room_or_section:$('edRoom').value,
+      structured_content:{titel:$('edTitel').value,befund:$('edBefund').value,ursache:$('edUrsache').value,massnahme:$('edMassnahme').value,dringlichkeit:$('edDring').value}};
+    $('saveState').innerText='Speichere…';
+    try{const r=await fetch(BACKEND+'/api/update-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const res=await r.json();$('saveState').innerText=res.success?'✅ Gespeichert':'❌ '+(res.error||'Fehler');if(res.success)loadBefunde(curProject);
+    }catch(e){$('saveState').innerText='❌ Netzwerkfehler';}
+  }
+  async function deleteBefund(){
+    if(!confirm('Diesen Befund wirklich löschen?'))return;
+    try{const r=await fetch(BACKEND+'/api/delete-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:$('edId').value})});
+      const res=await r.json();if(res.success){resetEditor();loadBefunde(curProject);}else alert(res.error);
+    }catch(e){alert('Netzwerkfehler');}
+  }
+  function downloadPdf(){window.location.href=BACKEND+'/api/generate-pdf?projectId='+encodeURIComponent(curProject);}
 
-        let loadedReports = [];
+  // ---------- PROFIL ----------
+  let logoData='';
+  function loadProfile(){
+    fetch(BACKEND+'/api/settings').then(r=>r.json()).then(res=>{
+      const s=res.data||{};
+      $('sCompany').value=s.company_name||'';$('sName').value=s.gutachter_name||'';$('sAddress').value=s.address||'';
+      $('sPhone').value=s.phone||'';$('sEmail').value=s.email||'';$('sWebsite').value=s.website||'';
+      $('sFooter').value=s.footer_note||'';$('sAccent').value=s.accent_color||'#E0922F';$('accentHex').innerText=$('sAccent').value;
+      logoData=s.logo||'';renderLogo();
+    }).catch(()=>{});
+  }
+  function renderLogo(){$('logoPrev').innerHTML=logoData?'<img src="'+logoData+'">':'Kein Logo';}
+  function removeLogo(){logoData='';renderLogo();}
+  $('logoInput').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;logoData=await resizeLogo(f);renderLogo();e.target.value='';});
+  $('sAccent').addEventListener('input',e=>$('accentHex').innerText=e.target.value.toUpperCase());
+  function resizeLogo(file){return new Promise(res=>{const img=new Image(),r=new FileReader();
+    r.onload=()=>{img.onload=()=>{let{width:w,height:h}=img,max=600;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>max){w=w*max/h;h=max;}
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);res(cv.toDataURL('image/png'));};img.src=r.result;};r.readAsDataURL(file);});}
+  async function saveProfile(){
+    const payload={company_name:$('sCompany').value,gutachter_name:$('sName').value,address:$('sAddress').value,
+      phone:$('sPhone').value,email:$('sEmail').value,website:$('sWebsite').value,footer_note:$('sFooter').value,
+      accent_color:$('sAccent').value,logo:logoData};
+    $('profileState').innerText='Speichere…';
+    try{const r=await fetch(BACKEND+'/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const res=await r.json();$('profileState').innerText=res.success?'✅ Profil gespeichert':'❌ '+(res.error||'Fehler');
+    }catch(e){$('profileState').innerText='❌ Netzwerkfehler';}
+  }
 
-        async function loadReports() {
-            const list = document.getElementById('reportsList');
-            const pid = currentProject();
-            if (!pid) { list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Bitte Projekt-ID eingeben.</p>'; return; }
-            list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Lade…</p>';
-            try {
-                const res = await fetch(`${BACKEND_URL}/api/reports?projectId=${encodeURIComponent(pid)}`);
-                const result = await res.json();
-                if (result.success && result.data.length > 0) {
-                    loadedReports = result.data;
-                    list.innerHTML = '';
-                    result.data.forEach((report, index) => {
-                        const c = report.structured_content || {};
-                        const card = document.createElement('div');
-                        card.className = "border border-slate-200 bg-white p-4 rounded-xl cursor-pointer hover:border-blue-400 transition-all";
-                        card.onclick = () => openEditor(index);
-                        card.innerHTML = `
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="font-bold text-xs text-slate-800 truncate">${escapeHtml(report.room_or_section || 'Allgemein')}</span>
-                                <span class="bg-slate-100 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">${escapeHtml(c.dringlichkeit || 'Mittel')}</span>
-                            </div>
-                            <p class="text-[11px] text-slate-500 line-clamp-2">${escapeHtml(c.befund || 'Kein Text…')}</p>`;
-                        list.appendChild(card);
-                    });
-                } else if (result.success) {
-                    list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Noch keine Befunde für dieses Projekt.</p>';
-                } else {
-                    list.innerHTML = `<p class="text-xs text-red-500 text-center py-4">${escapeHtml(result.error || 'Fehler')}</p>`;
-                }
-            } catch (e) {
-                list.innerHTML = '<p class="text-xs text-red-500 text-center py-4">Fehler beim Laden vom Server.</p>';
-                console.error(e);
-            }
-        }
-
-        function openEditor(index) {
-            const report = loadedReports[index];
-            const c = report.structured_content || {};
-            document.getElementById('editorPlaceholder').classList.add('hidden');
-            document.getElementById('editorCard').classList.remove('hidden');
-            document.getElementById('editReportId').value = report.id;
-            document.getElementById('editRoom').value = report.room_or_section || '';
-            document.getElementById('editBefund').value = c.befund || '';
-            document.getElementById('editUrsache').value = c.ursache || '';
-            document.getElementById('editMassnahme').value = c.massnahme || '';
-            document.getElementById('editDringlichkeit').value = c.dringlichkeit || 'Mittel';
-            document.getElementById('saveStatus').innerText = '';
-        }
-
-        document.getElementById('saveBtn').addEventListener('click', async () => {
-            const status = document.getElementById('saveStatus');
-            const payload = {
-                id: document.getElementById('editReportId').value,
-                room_or_section: document.getElementById('editRoom').value,
-                structured_content: {
-                    befund: document.getElementById('editBefund').value,
-                    ursache: document.getElementById('editUrsache').value,
-                    massnahme: document.getElementById('editMassnahme').value,
-                    dringlichkeit: document.getElementById('editDringlichkeit').value
-                }
-            };
-            status.innerText = "Speichere…";
-            try {
-                const res = await fetch(`${BACKEND_URL}/api/update-report`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-                });
-                const result = await res.json();
-                status.innerText = result.success ? "✅ Gespeichert!" : "❌ " + (result.error || "Fehler");
-                if (result.success) loadReports();
-            } catch (e) { status.innerText = "❌ Netzwerkfehler."; console.error(e); }
-        });
-
-        function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-    </script>
+  // ---------- START ----------
+  const urlProj=new URLSearchParams(location.search).get('projectId');
+  if(urlProj){
+    fetch(BACKEND+'/api/projects').then(r=>r.json()).then(res=>{
+      const p=(res.data||[]).find(x=>x.project_id===urlProj);
+      showProject(urlProj,p?p.project_name:urlProj);
+    }).catch(()=>showProject(urlProj,urlProj));
+  }else{showProjects();}
+</script>
 </body>
 </html>

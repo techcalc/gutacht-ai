@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GutachtAI – Aufnahme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1B19;--surf:#211F1B;--surf2:#2A2722;--paper:#FBFAF7;
+    --amber:#E0922F;--amber-deep:#B5701A;--teal:#3E9C86;--brick:#C0492B;
+    --muted:#8C877C;--muted-d:#A39D90;--line:#34302A;
+    --disp:'Archivo',sans-serif;--body:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--body);background:var(--ink);color:var(--paper);min-height:100vh;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(28,27,25,.9);backdrop-filter:blur(8px);z-index:10}
+  .logo{font-family:var(--disp);font-weight:800;font-size:18px}.logo b{color:var(--amber)}
+  .top-link{font-size:13px;color:var(--muted-d);font-family:var(--mono);display:inline-flex;gap:6px;align-items:center}
+  .top-link:hover{color:var(--amber)}
+  .shell{max-width:520px;margin:0 auto;padding:22px 20px 60px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+
+  .panel{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:18px}
+  label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-d);margin-bottom:7px}
+  input[type=text]{width:100%;background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:13px 14px;color:var(--paper);font-family:var(--body);font-size:15px}
+  input[type=text]:focus{outline:none;border-color:var(--amber)}
+  .field+.field{margin-top:14px}
+  .proj-locked{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surf2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .proj-locked .pn{font-family:var(--disp);font-weight:700;font-size:16px}
+  .proj-locked .pc{font-family:var(--mono);font-size:11px;color:var(--amber)}
+  .mini{background:none;border:1px solid var(--line);color:var(--muted-d);font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:7px;cursor:pointer}
+  .mini:hover{border-color:var(--amber);color:var(--amber)}
+
+  .recwrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 0 10px}
+  .recbtn{width:104px;height:104px;border-radius:50%;background:var(--brick);border:0;color:#fff;font-size:38px;cursor:pointer;transition:.15s;display:grid;place-items:center;box-shadow:0 14px 30px -12px rgba(192,73,43,.7)}
+  .recbtn:active{transform:scale(.95)}
+  .recbtn.live{animation:pulse 1.5s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(192,73,43,.6)}70%{box-shadow:0 0 0 16px rgba(192,73,43,0)}100%{box-shadow:0 0 0 0 rgba(192,73,43,0)}}
+  .recbtn:disabled{opacity:.4;cursor:not-allowed}
+  .status{font-size:14px;color:var(--muted-d);min-height:20px;text-align:center}
+  .timer{font-family:var(--mono);font-size:13px;color:var(--muted)}
+
+  /* Fotos */
+  .photos{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .thumb{position:relative;width:72px;height:72px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:0;font-size:12px;cursor:pointer;line-height:1}
+  .addphoto{width:72px;height:72px;border-radius:9px;border:1px dashed var(--line);background:var(--surf2);color:var(--muted-d);font-size:22px;cursor:pointer;display:grid;place-items:center}
+  .addphoto:hover{border-color:var(--amber);color:var(--amber)}
+
+  .toast{border-radius:11px;padding:13px 15px;font-size:14px;margin-top:14px;display:none}
+  .toast.ok{display:block;background:rgba(62,156,134,.12);border:1px solid rgba(62,156,134,.4);color:var(--teal)}
+  .toast.err{display:block;background:rgba(192,73,43,.12);border:1px solid rgba(192,73,43,.4);color:#e07a5f}
+
+  /* erfasste Befunde dieser Session */
+  .caught h3{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-d);margin-bottom:12px;display:flex;justify-content:space-between}
+  .bcard{display:flex;gap:12px;align-items:flex-start;background:var(--surf);border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:10px}
+  .bcard .n{font-family:var(--mono);font-weight:600;font-size:12px;background:var(--amber);color:#231a09;padding:2px 8px;border-radius:5px;flex:none}
+  .bcard .t{font-family:var(--disp);font-weight:700;font-size:14.5px}
+  .bcard .s{font-size:12.5px;color:var(--muted-d);margin-top:2px}
+  .gotodash{display:block;text-align:center;margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--amber);border:1px solid var(--line);border-radius:10px;padding:13px}
+  .gotodash:hover{border-color:var(--amber)}
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="/" class="logo">Gutacht<b>AI</b></a>
+  <a href="/dashboard" class="top-link">Dashboard →</a>
+</div>
+
+<div class="shell">
+  <div class="eyebrow">Mängelaufnahme</div>
+
+  <!-- Projekt -->
+  <div class="panel">
+    <div id="projSetup">
+      <div class="field">
+        <label>Projekt / Objekt</label>
+        <input type="text" id="projName" placeholder="z.B. Neubau Stuttgart, Musterstr. 7">
+      </div>
+      <div class="hint" style="text-align:left;margin-top:8px">Alle Aufnahmen landen unter diesem Projekt – sprich beliebig viele Befunde ein.</div>
+    </div>
+    <div id="projLocked" class="proj-locked" style="display:none">
+      <div>
+        <div class="pn" id="projLockedName">–</div>
+        <div class="pc"><span id="caughtCount">0</span> Befund(e) in diesem Projekt</div>
+      </div>
+      <button class="mini" id="changeProj">Projekt wechseln</button>
+    </div>
+  </div>
+
+  <!-- Aufnahme -->
+  <div class="panel">
+    <div class="field">
+      <label>Bauteil / Bereich</label>
+      <input type="text" id="room" placeholder="z.B. Keller Nordwand, Bad OG">
+    </div>
+
+    <div class="field" style="margin-top:16px">
+      <label>Fotos zum Befund</label>
+      <div class="photos" id="photos">
+        <button class="addphoto" id="addPhoto" type="button" title="Foto hinzufügen">+</button>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" capture="environment" multiple style="display:none">
+    </div>
+
+    <div class="recwrap">
+      <button class="recbtn" id="recBtn">🎤</button>
+      <div class="status" id="status">Bereit zur Aufnahme</div>
+      <div class="timer" id="timer"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- erfasste Befunde -->
+  <div class="caught" id="caughtWrap" style="display:none">
+    <h3><span>In diesem Projekt erfasst</span><span id="caughtCount2" class="mono"></span></h3>
+    <div id="caughtList"></div>
+    <a href="#" id="gotoDash" class="gotodash">Im Dashboard öffnen & PDF erstellen →</a>
+  </div>
+</div>
+
+<script>
+  const BACKEND_URL="";
+  let mediaRecorder,audioChunks=[],isRecording=false,timerInt,seconds=0,recMime="audio/webm";
+  let photos=[];           // data URLs (resized)
+  let projectId="",projectName="",caught=[];
+
+  const $=id=>document.getElementById(id);
+  const slug=s=>s.toLowerCase().trim().replace(/[^a-z0-9äöüß\s-]/gi,'').replace(/\s+/g,'-').slice(0,60)||('projekt-'+Date.now());
+
+  // Projekt aus URL oder localStorage
+  const url=new URLSearchParams(location.search);
+  const presetId=url.get('projectId'), presetName=url.get('projectName');
+  if(presetId){ lockProject(presetId, presetName||presetId); }
+  else {
+    const saved=localStorage.getItem('gutachtai_proj');
+    if(saved){ try{const o=JSON.parse(saved); $('projName').value=o.name||"";}catch(e){} }
+  }
+
+  function lockProject(id,name){
+    projectId=id; projectName=name;
+    $('projSetup').style.display='none';
+    $('projLocked').style.display='flex';
+    $('projLockedName').innerText=name;
+    localStorage.setItem('gutachtai_proj',JSON.stringify({id,name}));
+    $('gotoDash').href='/dashboard?projectId='+encodeURIComponent(id);
+  }
+  $('changeProj').addEventListener('click',()=>{
+    $('projSetup').style.display='block'; $('projLocked').style.display='none';
+    $('projName').value=projectName; projectId="";
+  });
+
+  // FOTOS
+  $('addPhoto').addEventListener('click',()=>$('photoInput').click());
+  $('photoInput').addEventListener('change',async e=>{
+    for(const f of e.target.files){ const d=await resizeImage(f,1280,.7); if(d) photos.push(d); }
+    e.target.value=''; renderPhotos();
+  });
+  function renderPhotos(){
+    const c=$('photos');
+    c.querySelectorAll('.thumb').forEach(t=>t.remove());
+    photos.forEach((p,i)=>{
+      const div=document.createElement('div'); div.className='thumb';
+      div.innerHTML='<img src="'+p+'"><button data-i="'+i+'">×</button>';
+      c.insertBefore(div,$('addPhoto'));
+    });
+    c.querySelectorAll('.thumb button').forEach(b=>b.onclick=()=>{photos.splice(+b.dataset.i,1);renderPhotos();});
+  }
+  function resizeImage(file,max,q){
+    return new Promise(res=>{
+      const img=new Image(),r=new FileReader();
+      r.onload=()=>{img.onload=()=>{
+        let{width:w,height:h}=img; if(w>h&&w>max){h=h*max/w;w=max;}else if(h>max){w=w*max/h;h=max;}
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        res(cv.toDataURL('image/jpeg',q));
+      };img.onerror=()=>res(null);img.src=r.result;};
+      r.onerror=()=>res(null);r.readAsDataURL(file);
+    });
+  }
+
+  // AUFNAHME
+  function pickMime(){for(const c of ["audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus","audio/mp4"]){if(window.MediaRecorder&&MediaRecorder.isTypeSupported(c))return c;}return"";}
+  $('recBtn').addEventListener('click',async()=>{
+    if(!isRecording){
+      // Projekt sicherstellen
+      if(!projectId){
+        const name=$('projName').value.trim();
+        if(!name){toast('Bitte zuerst ein Projekt/Objekt benennen.','err');return;}
+        lockProject(slug(name),name);
+      }
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        const chosen=pickMime();
+        mediaRecorder=chosen?new MediaRecorder(stream,{mimeType:chosen}):new MediaRecorder(stream);
+        recMime=mediaRecorder.mimeType||chosen||"audio/webm";audioChunks=[];
+        mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};
+        mediaRecorder.onstop=async()=>{const base=recMime.split(';')[0];await send(new Blob(audioChunks,{type:base}),base);};
+        mediaRecorder.start();isRecording=true;
+        $('recBtn').innerText="⏹";$('recBtn').classList.add('live');
+        $('status').innerText="Ich höre zu – sprich den Mangel.";$('status').style.color="var(--brick)";
+        seconds=0;timerInt=setInterval(()=>{seconds++;$('timer').innerText=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');},1000);
+      }catch(err){toast('Mikrofon-Zugriff nötig. Über https:// öffnen und Zugriff erlauben.','err');}
+    }else{
+      mediaRecorder.stop();mediaRecorder.stream.getTracks().forEach(t=>t.stop());isRecording=false;
+      $('recBtn').innerText="🎤";$('recBtn').classList.remove('live');$('recBtn').disabled=true;
+      $('status').innerText="Wird strukturiert…";$('status').style.color="var(--amber)";
+      clearInterval(timerInt);$('timer').innerText="";
+    }
+  });
+
+  async function send(blob,mime){
+    const ext=mime.includes('ogg')?'ogg':mime.includes('mp4')?'m4a':'webm';
+    const fd=new FormData();
+    fd.append('audio',blob,'aufnahme.'+ext);
+    fd.append('projectId',projectId);fd.append('projectName',projectName);
+    fd.append('roomOrSection',$('room').value.trim()||'Allgemein');
+    fd.append('photos',JSON.stringify(photos));
+    try{
+      const r=await fetch(BACKEND_URL+'/api/process-audio',{method:'POST',body:fd});
+      const res=await r.json();
+      if(res.success){
+        addCaught(res.befund||{},$('room').value.trim()||'Allgemein');
+        toast('Befund erfasst und gespeichert.','ok');
+        $('room').value='';photos=[];renderPhotos();
+      }else{toast('Fehler: '+(res.error||'unbekannt'),'err');}
+    }catch(e){toast('Netzwerkfehler beim Senden.','err');}
+    $('recBtn').disabled=false;$('status').innerText="Bereit für den nächsten Befund";$('status').style.color="var(--muted-d)";
+  }
+
+  function addCaught(b,room){
+    caught.push(b);
+    $('caughtWrap').style.display='block';
+    $('caughtCount').innerText=caught.length;$('caughtCount2').innerText=caught.length;
+    const div=document.createElement('div');div.className='bcard';
+    div.innerHTML='<span class="n">'+String(caught.length).padStart(2,'0')+'</span><div><div class="t">'+esc(b.titel||room)+'</div><div class="s">'+esc(room)+' · '+esc(b.dringlichkeit||'Mittel')+'</div></div>';
+    $('caughtList').prepend(div);
+  }
+  function toast(msg,type){const t=$('toast');t.className='toast '+type;t.innerText=(type==='ok'?'✅ ':'⚠️ ')+msg;}
+  function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+</script>
+</body>
+</html>
