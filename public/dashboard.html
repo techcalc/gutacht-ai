@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --ink:#1C1B19;--paper:#FBFAF7;--paper-2:#F3F0E8;--card:#FFFFFF;
@@ -104,7 +105,9 @@
     </nav>
   </div>
   <div class="side-bot">
+    <div id="userEmail" style="font-family:var(--mono);font-size:11px;color:#7E7B96;margin-bottom:12px;word-break:break-all"></div>
     <a href="/app" class="btn btn-amber full">🎤 Aufnahme öffnen</a>
+    <a id="logoutBtn" class="btn btn-out full" style="margin-top:10px;cursor:pointer">Abmelden</a>
   </div>
 </aside>
 
@@ -191,6 +194,17 @@
 
 <script>
   const BACKEND="";
+  let supaClient=null, authToken=null;
+  async function ensureSession(){
+    try{ const {data:{session}}=await supaClient.auth.getSession(); authToken=session&&session.access_token; }catch(e){}
+    if(!authToken){ location.href='/login'; }
+    return authToken;
+  }
+  async function authFetch(url,opts={}){
+    const tok=authToken||(await ensureSession());
+    opts.headers=Object.assign({},opts.headers||{},{'Authorization':'Bearer '+tok});
+    return fetch(url,opts);
+  }
   const $=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   let befunde=[],curProject=null,curProjectName="";
@@ -223,7 +237,7 @@
   async function loadProjects(){
     const g=$('projectsGrid');g.innerHTML='<p style="color:var(--muted)">Lade…</p>';
     try{
-      const r=await fetch(BACKEND+'/api/projects');const res=await r.json();
+      const r=await authFetch(BACKEND+'/api/projects');const res=await r.json();
       if(res.success&&res.data.length){
         g.innerHTML='';
         res.data.forEach(p=>{
@@ -242,7 +256,7 @@
   async function loadBefunde(id){
     const l=$('befundList');l.innerHTML='<p style="color:var(--muted);padding:10px">Lade…</p>';
     try{
-      const r=await fetch(BACKEND+'/api/reports?projectId='+encodeURIComponent(id));const res=await r.json();
+      const r=await authFetch(BACKEND+'/api/reports?projectId='+encodeURIComponent(id));const res=await r.json();
       befunde=res.data||[];$('bCount').innerText=befunde.length;
       if(!befunde.length){l.innerHTML='<p style="color:var(--muted);padding:10px;font-size:13px">Noch keine Befunde.</p>';return;}
       l.innerHTML='';
@@ -271,22 +285,33 @@
     const payload={id:$('edId').value,room_or_section:$('edRoom').value,
       structured_content:{titel:$('edTitel').value,befund:$('edBefund').value,ursache:$('edUrsache').value,massnahme:$('edMassnahme').value,dringlichkeit:$('edDring').value}};
     $('saveState').innerText='Speichere…';
-    try{const r=await fetch(BACKEND+'/api/update-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    try{const r=await authFetch(BACKEND+'/api/update-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       const res=await r.json();$('saveState').innerText=res.success?'✅ Gespeichert':'❌ '+(res.error||'Fehler');if(res.success)loadBefunde(curProject);
     }catch(e){$('saveState').innerText='❌ Netzwerkfehler';}
   }
   async function deleteBefund(){
     if(!confirm('Diesen Befund wirklich löschen?'))return;
-    try{const r=await fetch(BACKEND+'/api/delete-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:$('edId').value})});
+    try{const r=await authFetch(BACKEND+'/api/delete-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:$('edId').value})});
       const res=await r.json();if(res.success){resetEditor();loadBefunde(curProject);}else alert(res.error);
     }catch(e){alert('Netzwerkfehler');}
   }
-  function downloadPdf(){window.location.href=BACKEND+'/api/generate-pdf?projectId='+encodeURIComponent(curProject);}
+  async function downloadPdf(){
+    try{
+      const r=await authFetch(BACKEND+'/api/generate-pdf?projectId='+encodeURIComponent(curProject));
+      if(!r.ok){ const j=await r.json().catch(()=>({})); alert('Fehler: '+(j.error||r.status)); return; }
+      const blob=await r.blob();
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='Maengelprotokoll_'+curProject+'.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    }catch(e){ alert('Download fehlgeschlagen.'); }
+  }
 
   // ---------- PROFIL ----------
   let logoData='';
   function loadProfile(){
-    fetch(BACKEND+'/api/settings').then(r=>r.json()).then(res=>{
+    authFetch(BACKEND+'/api/settings').then(r=>r.json()).then(res=>{
       const s=res.data||{};
       $('sCompany').value=s.company_name||'';$('sName').value=s.gutachter_name||'';$('sAddress').value=s.address||'';
       $('sPhone').value=s.phone||'';$('sEmail').value=s.email||'';$('sWebsite').value=s.website||'';
@@ -306,19 +331,31 @@
       phone:$('sPhone').value,email:$('sEmail').value,website:$('sWebsite').value,footer_note:$('sFooter').value,
       accent_color:$('sAccent').value,logo:logoData};
     $('profileState').innerText='Speichere…';
-    try{const r=await fetch(BACKEND+'/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    try{const r=await authFetch(BACKEND+'/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       const res=await r.json();$('profileState').innerText=res.success?'✅ Profil gespeichert':'❌ '+(res.error||'Fehler');
     }catch(e){$('profileState').innerText='❌ Netzwerkfehler';}
   }
 
-  // ---------- START ----------
-  const urlProj=new URLSearchParams(location.search).get('projectId');
-  if(urlProj){
-    fetch(BACKEND+'/api/projects').then(r=>r.json()).then(res=>{
-      const p=(res.data||[]).find(x=>x.project_id===urlProj);
-      showProject(urlProj,p?p.project_name:urlProj);
-    }).catch(()=>showProject(urlProj,urlProj));
-  }else{showProjects();}
+  // ---------- START (mit Login-Schutz) ----------
+  (async function boot(){
+    try{
+      const cfg=await (await fetch('/api/config')).json();
+      if(!cfg.url||!cfg.anonKey){ document.body.innerHTML='<p style="padding:40px;font-family:monospace;color:#fff">Server nicht konfiguriert: SUPABASE_ANON_KEY fehlt in Coolify.</p>'; return; }
+      supaClient=supabase.createClient(cfg.url,cfg.anonKey);
+      const {data:{session}}=await supaClient.auth.getSession();
+      if(!session){ location.href='/login'; return; }
+      authToken=session.access_token;
+      document.getElementById('userEmail').innerText=session.user.email||'';
+      document.getElementById('logoutBtn').addEventListener('click',async()=>{ try{await supaClient.auth.signOut();}catch(e){} location.href='/login'; });
+
+      const urlProj=new URLSearchParams(location.search).get('projectId');
+      if(urlProj){
+        const res=await (await authFetch(BACKEND+'/api/projects')).json();
+        const p=(res.data||[]).find(x=>x.project_id===urlProj);
+        showProject(urlProj,p?p.project_name:urlProj);
+      }else{ showProjects(); }
+    }catch(e){ location.href='/login'; }
+  })();
 </script>
 </body>
 </html>

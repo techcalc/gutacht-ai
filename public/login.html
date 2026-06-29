@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GutachtAI – Anmelden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--black:#0B0A08;--panel:#15130E;--panel-2:#1D1A13;--line:#2A271D;
+    --amber:#E0922F;--amber-bright:#F4AB4E;--gold:#E8B45C;--text:#F6F2E9;--muted:#ABA392;--muted-2:#7E7666;--brick:#C0492B;--teal:#46A98F;
+    --disp:'Archivo',sans-serif;--body:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--body);background:var(--black);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased;position:relative;overflow:hidden}
+  .glow{position:fixed;width:560px;height:560px;border-radius:50%;filter:blur(100px);background:rgba(224,146,47,.14);top:-200px;right:-160px;pointer-events:none}
+  a{color:inherit;text-decoration:none}
+  .logo{font-family:var(--disp);font-weight:800;font-size:24px;margin-bottom:26px;z-index:2}
+  .logo b{color:var(--amber)}
+  .card{position:relative;z-index:2;width:100%;max-width:410px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:32px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber)}
+  h1{font-family:var(--disp);font-weight:800;font-size:24px;margin:8px 0 22px;letter-spacing:-.02em}
+  .tabs{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:4px;margin-bottom:22px}
+  .tabs button{flex:1;border:0;background:none;color:var(--muted);font-family:var(--body);font-weight:600;font-size:14px;padding:9px;border-radius:8px;cursor:pointer;transition:.15s}
+  .tabs button.active{background:var(--amber);color:#241808}
+  label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+  input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:13px 14px;color:var(--text);font-family:var(--body);font-size:15px;margin-bottom:16px}
+  input:focus{outline:none;border-color:var(--amber)}
+  .btn{width:100%;border:0;background:linear-gradient(135deg,var(--gold),var(--amber));color:#241808;font-family:var(--body);font-weight:700;font-size:15px;padding:14px;border-radius:11px;cursor:pointer;transition:.2s;box-shadow:0 10px 30px -10px rgba(224,146,47,.5)}
+  .btn:hover{transform:translateY(-1px)}
+  .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  .msg{font-size:13.5px;margin-top:14px;padding:11px 13px;border-radius:9px;display:none}
+  .msg.err{display:block;background:rgba(192,73,43,.12);border:1px solid rgba(192,73,43,.4);color:#e8917a}
+  .msg.ok{display:block;background:rgba(70,169,143,.12);border:1px solid rgba(70,169,143,.4);color:var(--teal)}
+  .back{margin-top:22px;font-size:13px;color:var(--muted-2);z-index:2}
+  .back:hover{color:var(--amber-bright)}
+  .hint{font-size:12px;color:var(--muted-2);margin-top:-6px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<a href="/" class="logo">Gutacht<b>AI</b></a>
+
+<div class="card">
+  <div class="eyebrow">Kundenbereich</div>
+  <h1 id="title">Willkommen zurück</h1>
+
+  <div class="tabs">
+    <button id="tabLogin" class="active" onclick="setMode('login')">Anmelden</button>
+    <button id="tabReg" onclick="setMode('register')">Registrieren</button>
+  </div>
+
+  <div>
+    <label>E-Mail</label>
+    <input type="email" id="email" placeholder="name@buero.de" autocomplete="email">
+    <label>Passwort</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    <div class="hint" id="pwHint" style="display:none">Mindestens 6 Zeichen.</div>
+    <button class="btn" id="submitBtn" onclick="submit()">Anmelden</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+<a href="/" class="back">← Zurück zur Startseite</a>
+
+<script>
+  let supa=null, mode='login';
+
+  async function init(){
+    try{
+      const cfg = await (await fetch('/api/config')).json();
+      if(!cfg.url || !cfg.anonKey){ showMsg('Server noch nicht konfiguriert (SUPABASE_ANON_KEY fehlt).','err'); return; }
+      supa = supabase.createClient(cfg.url, cfg.anonKey);
+      const { data:{ session } } = await supa.auth.getSession();
+      if(session){ location.href='/dashboard'; }
+    }catch(e){ showMsg('Verbindung zum Server fehlgeschlagen.','err'); }
+  }
+  init();
+
+  function setMode(m){
+    mode=m;
+    document.getElementById('tabLogin').classList.toggle('active',m==='login');
+    document.getElementById('tabReg').classList.toggle('active',m==='register');
+    document.getElementById('title').innerText = m==='login'?'Willkommen zurück':'Konto erstellen';
+    document.getElementById('submitBtn').innerText = m==='login'?'Anmelden':'Konto erstellen';
+    document.getElementById('pwHint').style.display = m==='register'?'block':'none';
+    document.getElementById('password').setAttribute('autocomplete', m==='login'?'current-password':'new-password');
+    hideMsg();
+  }
+  function showMsg(t,type){ const m=document.getElementById('msg'); m.className='msg '+type; m.innerText=t; }
+  function hideMsg(){ document.getElementById('msg').className='msg'; }
+
+  async function submit(){
+    if(!supa){ showMsg('Server nicht bereit.','err'); return; }
+    const email=document.getElementById('email').value.trim();
+    const password=document.getElementById('password').value;
+    if(!email || !password){ showMsg('Bitte E-Mail und Passwort eingeben.','err'); return; }
+    const btn=document.getElementById('submitBtn'); btn.disabled=true; const orig=btn.innerText; btn.innerText='Bitte warten…';
+    try{
+      if(mode==='login'){
+        const { error } = await supa.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        location.href='/dashboard';
+      }else{
+        const { data, error } = await supa.auth.signUp({ email, password });
+        if(error) throw error;
+        if(data.session){ location.href='/dashboard'; }
+        else { showMsg('Fast geschafft! Bitte bestätige deine E-Mail und melde dich dann an.','ok'); setMode('login'); }
+      }
+    }catch(e){
+      const m=(e.message||'').toLowerCase();
+      if(m.includes('invalid login')) showMsg('E-Mail oder Passwort falsch.','err');
+      else if(m.includes('already registered')) showMsg('Diese E-Mail ist bereits registriert. Bitte anmelden.','err');
+      else if(m.includes('at least 6')) showMsg('Passwort muss mindestens 6 Zeichen haben.','err');
+      else showMsg(e.message||'Fehler.','err');
+    }finally{ btn.disabled=false; btn.innerText=orig; }
+  }
+
+  document.getElementById('password').addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
+</script>
+</body>
+</html>

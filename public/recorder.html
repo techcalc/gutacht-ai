@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --ink:#1C1B19;--surf:#211F1B;--surf2:#2A2722;--paper:#FBFAF7;
@@ -70,7 +71,10 @@
 <body>
 <div class="topbar">
   <a href="/" class="logo">Gutacht<b>AI</b></a>
-  <a href="/dashboard" class="top-link">Dashboard →</a>
+  <div style="display:flex;gap:18px;align-items:center">
+    <a href="/dashboard" class="top-link">Dashboard →</a>
+    <a id="logoutLink" class="top-link" style="cursor:pointer">Abmelden</a>
+  </div>
 </div>
 
 <div class="shell">
@@ -128,6 +132,23 @@
 
 <script>
   const BACKEND_URL="";
+  let authToken=null, supaClient=null;
+  (async()=>{
+    try{
+      const cfg=await (await fetch('/api/config')).json();
+      supaClient=supabase.createClient(cfg.url,cfg.anonKey);
+      const {data:{session}}=await supaClient.auth.getSession();
+      if(!session){ location.href='/login'; return; }
+      authToken=session.access_token;
+    }catch(e){ location.href='/login'; }
+  })();
+  async function freshToken(){
+    if(authToken) return authToken;
+    try{ const {data:{session}}=await supaClient.auth.getSession(); authToken=session&&session.access_token; }catch(e){}
+    if(!authToken){ location.href='/login'; }
+    return authToken;
+  }
+  document.getElementById('logoutLink').addEventListener('click',async()=>{ try{await supaClient.auth.signOut();}catch(e){} location.href='/login'; });
   let mediaRecorder,audioChunks=[],isRecording=false,timerInt,seconds=0,recMime="audio/webm";
   let photos=[];           // data URLs (resized)
   let projectId="",projectName="",caught=[];
@@ -224,7 +245,8 @@
     fd.append('roomOrSection',$('room').value.trim()||'Allgemein');
     fd.append('photos',JSON.stringify(photos));
     try{
-      const r=await fetch(BACKEND_URL+'/api/process-audio',{method:'POST',body:fd});
+      const tok=await freshToken();
+      const r=await fetch(BACKEND_URL+'/api/process-audio',{method:'POST',headers:{'Authorization':'Bearer '+tok},body:fd});
       const res=await r.json();
       if(res.success){
         addCaught(res.befund||{},$('room').value.trim()||'Allgemein');
