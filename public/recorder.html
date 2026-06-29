@@ -46,12 +46,15 @@
   .timer{font-family:var(--mono);font-size:13px;color:var(--muted)}
 
   /* Fotos */
-  .photos{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-  .thumb{position:relative;width:72px;height:72px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+  .photo-actions{display:flex;gap:10px;margin-bottom:12px}
+  .pbtn{flex:1;background:var(--surf2);border:1px solid var(--line);color:var(--paper);font-family:var(--body);font-weight:600;font-size:14.5px;padding:14px;border-radius:11px;cursor:pointer;transition:.15s}
+  .pbtn:hover{border-color:var(--amber);color:var(--amber)}
+  .pbtn:active{transform:scale(.98)}
+  .photos{display:flex;flex-wrap:wrap;gap:10px}
+  .thumb{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
   .thumb img{width:100%;height:100%;object-fit:cover}
-  .thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:0;font-size:12px;cursor:pointer;line-height:1}
-  .addphoto{width:72px;height:72px;border-radius:9px;border:1px dashed var(--line);background:var(--surf2);color:var(--muted-d);font-size:22px;cursor:pointer;display:grid;place-items:center}
-  .addphoto:hover{border-color:var(--amber);color:var(--amber)}
+  .thumb button{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;border:0;font-size:13px;cursor:pointer;line-height:1}
+  .photo-empty{font-size:12.5px;color:var(--muted);font-style:italic}
 
   .toast{border-radius:11px;padding:13px 15px;font-size:14px;margin-top:14px;display:none}
   .toast.ok{display:block;background:rgba(62,156,134,.12);border:1px solid rgba(62,156,134,.4);color:var(--teal)}
@@ -92,10 +95,11 @@
     <div id="projLocked" class="proj-locked" style="display:none">
       <div>
         <div class="pn" id="projLockedName">–</div>
-        <div class="pc"><span id="caughtCount">0</span> Befund(e) in diesem Projekt</div>
+        <div class="pc">Aktuelles Projekt · <span id="caughtCount">0</span> Befund(e)</div>
       </div>
-      <button class="mini" id="changeProj">Projekt wechseln</button>
+      <button class="mini" id="changeProj">Wechseln</button>
     </div>
+    <div id="lockHint" class="hint" style="display:none;text-align:left;margin-top:10px">✓ Weitere Befunde landen automatisch in diesem Projekt. Für ein neues Zimmer einfach unten das Bauteil ändern und wieder aufnehmen.</div>
   </div>
 
   <!-- Aufnahme -->
@@ -107,10 +111,13 @@
 
     <div class="field" style="margin-top:16px">
       <label>Fotos zum Befund</label>
-      <div class="photos" id="photos">
-        <button class="addphoto" id="addPhoto" type="button" title="Foto hinzufügen">+</button>
+      <div class="photo-actions">
+        <button type="button" class="pbtn" id="camBtn">📷 Kamera</button>
+        <button type="button" class="pbtn" id="galBtn">🖼️ Galerie</button>
       </div>
-      <input type="file" id="photoInput" accept="image/*" capture="environment" multiple style="display:none">
+      <div class="photos" id="photos"></div>
+      <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="galInput" accept="image/*" multiple style="display:none">
     </div>
 
     <div class="recwrap">
@@ -169,28 +176,31 @@
     projectId=id; projectName=name;
     $('projSetup').style.display='none';
     $('projLocked').style.display='flex';
+    $('lockHint').style.display='block';
     $('projLockedName').innerText=name;
     localStorage.setItem('gutachtai_proj',JSON.stringify({id,name}));
     $('gotoDash').href='/dashboard?projectId='+encodeURIComponent(id);
   }
   $('changeProj').addEventListener('click',()=>{
-    $('projSetup').style.display='block'; $('projLocked').style.display='none';
+    $('projSetup').style.display='block'; $('projLocked').style.display='none'; $('lockHint').style.display='none';
     $('projName').value=projectName; projectId="";
   });
 
   // FOTOS
-  $('addPhoto').addEventListener('click',()=>$('photoInput').click());
-  $('photoInput').addEventListener('change',async e=>{
-    for(const f of e.target.files){ const d=await resizeImage(f,1280,.7); if(d) photos.push(d); }
-    e.target.value=''; renderPhotos();
-  });
+  async function handleFiles(files){
+    for(const f of files){ const d=await resizeImage(f,1280,.7); if(d) photos.push(d); }
+    renderPhotos();
+  }
+  $('camBtn').addEventListener('click',()=>$('camInput').click());
+  $('galBtn').addEventListener('click',()=>$('galInput').click());
+  $('camInput').addEventListener('change',async e=>{ await handleFiles(e.target.files); e.target.value=''; });
+  $('galInput').addEventListener('change',async e=>{ await handleFiles(e.target.files); e.target.value=''; });
   function renderPhotos(){
-    const c=$('photos');
-    c.querySelectorAll('.thumb').forEach(t=>t.remove());
+    const c=$('photos'); c.innerHTML='';
     photos.forEach((p,i)=>{
       const div=document.createElement('div'); div.className='thumb';
       div.innerHTML='<img src="'+p+'"><button data-i="'+i+'">×</button>';
-      c.insertBefore(div,$('addPhoto'));
+      c.appendChild(div);
     });
     c.querySelectorAll('.thumb button').forEach(b=>b.onclick=()=>{photos.splice(+b.dataset.i,1);renderPhotos();});
   }
