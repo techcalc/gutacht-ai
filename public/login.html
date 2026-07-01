@@ -46,7 +46,7 @@
   <div class="eyebrow">Kundenbereich</div>
   <h1 id="title">Willkommen zurück</h1>
 
-  <div class="tabs">
+  <div class="tabs" id="tabs">
     <button id="tabLogin" class="active" onclick="setMode('login')">Anmelden</button>
     <button id="tabReg" onclick="setMode('register')">Registrieren</button>
   </div>
@@ -54,13 +54,16 @@
   <div>
     <label>E-Mail</label>
     <input type="email" id="email" placeholder="name@buero.de" autocomplete="email">
-    <label>Passwort</label>
+    <label id="pwLabel">Passwort</label>
     <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
     <div class="hint" id="pwHint" style="display:none">Mindestens 6 Zeichen.</div>
     <button class="btn" id="submitBtn" onclick="submit()">Anmelden</button>
     <div class="msg" id="msg"></div>
     <div id="forgotWrap" style="text-align:center;margin-top:16px">
       <a id="forgotLink" style="font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline">Passwort vergessen?</a>
+    </div>
+    <div id="backWrap" style="display:none;text-align:center;margin-top:16px">
+      <a id="backToLogin" style="font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline">← Zurück zur Anmeldung</a>
     </div>
   </div>
 </div>
@@ -82,19 +85,26 @@
 
   function setMode(m){
     mode=m;
-    document.getElementById('tabLogin').classList.toggle('active',m==='login');
-    document.getElementById('tabReg').classList.toggle('active',m==='register');
-    document.getElementById('title').innerText = m==='login'?'Willkommen zurück':'Konto erstellen';
-    document.getElementById('submitBtn').innerText = m==='login'?'Anmelden':'Konto erstellen';
-    document.getElementById('pwHint').style.display = m==='register'?'block':'none';
-    document.getElementById('forgotWrap').style.display = m==='login'?'block':'none';
-    document.getElementById('password').setAttribute('autocomplete', m==='login'?'current-password':'new-password');
+    const isLogin=m==='login', isReg=m==='register', isForgot=m==='forgot';
+    document.getElementById('tabs').style.display = isForgot?'none':'flex';
+    document.getElementById('tabLogin').classList.toggle('active',isLogin);
+    document.getElementById('tabReg').classList.toggle('active',isReg);
+    document.getElementById('title').innerText = isForgot?'Passwort vergessen':(isLogin?'Willkommen zurück':'Konto erstellen');
+    document.getElementById('submitBtn').innerText = isForgot?'Reset-Link senden':(isLogin?'Anmelden':'Konto erstellen');
+    document.getElementById('pwLabel').style.display = isForgot?'none':'block';
+    document.getElementById('password').style.display = isForgot?'none':'block';
+    document.getElementById('pwHint').style.display = isReg?'block':'none';
+    document.getElementById('forgotWrap').style.display = isLogin?'block':'none';
+    document.getElementById('backWrap').style.display = isForgot?'block':'none';
+    const eb=document.querySelector('.eyebrow'); if(eb) eb.innerText = isForgot?'E-Mail eingeben':'Kundenbereich';
+    document.getElementById('password').setAttribute('autocomplete', isLogin?'current-password':'new-password');
     hideMsg();
   }
   function showMsg(t,type){ const m=document.getElementById('msg'); m.className='msg '+type; m.innerText=t; }
   function hideMsg(){ document.getElementById('msg').className='msg'; }
 
   async function submit(){
+    if(mode==='forgot'){ return forgotPassword(); }
     if(!supa){ showMsg('Server nicht bereit.','err'); return; }
     const email=document.getElementById('email').value.trim();
     const password=document.getElementById('password').value;
@@ -121,17 +131,21 @@
   }
 
   document.getElementById('password').addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
+  document.getElementById('email').addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
 
-  document.getElementById('forgotLink').addEventListener('click', forgotPassword);
+  document.getElementById('forgotLink').addEventListener('click',()=>setMode('forgot'));
+  document.getElementById('backToLogin').addEventListener('click',()=>setMode('login'));
   async function forgotPassword(){
     if(!supa){ showMsg('Server nicht bereit.','err'); return; }
     const email=document.getElementById('email').value.trim();
-    if(!email){ showMsg('Bitte gib oben zuerst deine E-Mail ein.','err'); return; }
+    if(!email){ showMsg('Bitte gib deine E-Mail ein.','err'); return; }
+    const btn=document.getElementById('submitBtn'); btn.disabled=true; const orig=btn.innerText; btn.innerText='Sende…';
     try{
       const { error } = await supa.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/reset' });
       if(error) throw error;
       showMsg('E-Mail zum Zurücksetzen verschickt. Bitte Posteingang (und Spam) prüfen.','ok');
     }catch(e){ showMsg(e.message||'Fehler beim Senden.','err'); }
+    finally{ btn.disabled=false; btn.innerText=orig; }
   }
 </script>
 </body>
