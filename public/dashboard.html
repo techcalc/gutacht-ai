@@ -102,6 +102,7 @@
     <nav class="side">
       <a id="navProjects" class="active" onclick="showProjects()">🗂️ Projekte</a>
       <a id="navProfile" onclick="showProfile()">🏢 Profil &amp; Logo</a>
+      <a id="navBilling" onclick="showBilling()">💳 Abo &amp; Rechnung</a>
     </nav>
   </div>
   <div class="side-bot">
@@ -121,6 +122,7 @@
   </div>
 
   <div class="content">
+    <div id="billingBanner" style="display:none;margin-bottom:18px;padding:14px 18px;border-radius:12px;font-size:14px;font-weight:500"></div>
     <!-- VIEW: PROJEKTE -->
     <section id="viewProjects">
       <span class="eyebrow">Übersicht</span>
@@ -189,6 +191,14 @@
         </div>
       </div>
     </section>
+
+    <!-- VIEW: ABO -->
+    <section id="viewBilling" class="hidden">
+      <span class="eyebrow">Dein Abo</span>
+      <div id="billingStatus" style="margin:16px 0 8px;padding:18px 20px;border-radius:14px;background:#F3F1EA;border:1px solid #E7E3D9;font-size:15px;color:#3A362E">Lädt…</div>
+      <div id="planGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:18px"></div>
+      <p style="margin-top:18px;font-size:12.5px;color:#8C877C">Alle Preise pro Monat, zzgl. ggf. USt. Jederzeit kündbar. Testphase 14 Tage – keine Kreditkarte nötig.</p>
+    </section>
   </div>
 </main>
 
@@ -210,8 +220,8 @@
   let befunde=[],curProject=null,curProjectName="";
 
   // ---------- VIEW SWITCH ----------
-  function setNav(a){['navProjects','navProfile'].forEach(i=>$(i).classList.remove('active'));$(a).classList.add('active');}
-  function hideAll(){['viewProjects','viewProject','viewProfile'].forEach(i=>$(i).classList.add('hidden'));}
+  function setNav(a){['navProjects','navProfile','navBilling'].forEach(i=>$(i).classList.remove('active'));$(a).classList.add('active');}
+  function hideAll(){['viewProjects','viewProject','viewProfile','viewBilling'].forEach(i=>$(i).classList.add('hidden'));}
 
   function showProjects(){
     hideAll();setNav('navProjects');$('viewProjects').classList.remove('hidden');
@@ -222,6 +232,78 @@
     hideAll();setNav('navProfile');$('viewProfile').classList.remove('hidden');
     $('crumb').innerText='Einstellungen';$('pageTitle').innerText='Profil & Logo';$('topActions').innerHTML='';
     loadProfile();
+  }
+
+  // ---------- ABO / BILLING ----------
+  const PLANS=[
+    {id:'starter',name:'Starter',price:'19 €',sub:'/Monat',feats:['5 Projekte pro Monat','Eigenes Logo im PDF','Sprachaufnahme + KI-Befund']},
+    {id:'professional',name:'Professional',price:'49 €',sub:'/Monat',badge:'Beliebt',feats:['Unbegrenzte Projekte','Fotos im Protokoll','Voll anpassbares PDF','Priorisierte Verarbeitung']},
+    {id:'kanzlei',name:'Kanzlei',price:'129 €',sub:'/Monat',feats:['Alles aus Professional','Für Teams / mehrere Gutachter','Sammel-Abrechnung']},
+  ];
+  let billingCache=null;
+
+  async function showBilling(){
+    hideAll();setNav('navBilling');$('viewBilling').classList.remove('hidden');
+    $('crumb').innerText='Konto';$('pageTitle').innerText='Abo & Rechnung';$('topActions').innerHTML='';
+    await loadBilling();
+  }
+  async function loadBilling(){
+    try{
+      const res=await (await authFetch(BACKEND+'/api/billing/status')).json();
+      const b=res.data||{}; billingCache=b;
+      // Statuszeile
+      const sc=$('billingStatus');
+      if(b.status==='active'){
+        sc.innerHTML='✅ Aktives Abo: <b>'+esc(b.plan_label||'—')+'</b>'+
+          '<button class="btn btn-out" style="margin-left:14px" onclick="openPortal()">Abo verwalten</button>';
+      }else if(b.active && b.status==='trial'){
+        sc.innerHTML='🎁 Testphase aktiv – noch <b>'+b.days_left+' Tag(e)</b>. Wähle unten dein Abo, um dauerhaft weiterzuarbeiten.';
+      }else{
+        sc.innerHTML='⚠️ Deine Testphase ist abgelaufen. Bitte wähle ein Abo, um wieder Befunde zu erstellen.';
+      }
+      // Plan-Karten
+      $('planGrid').innerHTML=PLANS.map(p=>{
+        const isCur=b.status==='active'&&b.plan===p.id;
+        const border=p.badge?'#E0922F':'#E7E3D9';
+        return '<div style="position:relative;background:#fff;border:1.5px solid '+border+';border-radius:16px;padding:22px 20px;display:flex;flex-direction:column">'+
+          (p.badge?'<div style="position:absolute;top:-11px;left:20px;background:#E0922F;color:#241808;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+p.badge+'</div>':'')+
+          '<div style="font-family:var(--mono,monospace);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#B5701A">'+p.name+'</div>'+
+          '<div style="margin:8px 0 14px"><span style="font-size:30px;font-weight:800;color:#1C1B19">'+p.price+'</span><span style="color:#8C877C;font-size:14px">'+p.sub+'</span></div>'+
+          '<ul style="list-style:none;padding:0;margin:0 0 18px;flex:1">'+p.feats.map(f=>'<li style="font-size:13.5px;color:#4A463D;padding:5px 0;border-bottom:1px solid #F1EEE6">✓ '+esc(f)+'</li>').join('')+'</ul>'+
+          (isCur
+            ? '<button class="btn btn-out" disabled style="opacity:.7">Aktueller Plan</button>'
+            : '<button class="btn btn-amber" onclick="checkout(\''+p.id+'\',this)">'+(b.status==='active'?'Wechseln':'Wählen')+'</button>')+
+        '</div>';
+      }).join('');
+    }catch(e){ $('billingStatus').innerText='Konnte Abo-Status nicht laden.'; }
+  }
+  async function checkout(plan,btn){
+    if(btn){ btn.disabled=true; btn.innerText='Weiter zu Stripe…'; }
+    try{
+      const res=await (await authFetch(BACKEND+'/api/billing/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan})})).json();
+      if(res.url){ location.href=res.url; }
+      else { alert('Fehler: '+(res.error||'unbekannt')); if(btn){btn.disabled=false;btn.innerText='Wählen';} }
+    }catch(e){ alert('Checkout fehlgeschlagen.'); if(btn){btn.disabled=false;btn.innerText='Wählen';} }
+  }
+  async function openPortal(){
+    try{
+      const res=await (await authFetch(BACKEND+'/api/billing/portal',{method:'POST'})).json();
+      if(res.url) location.href=res.url; else alert('Fehler: '+(res.error||'unbekannt'));
+    }catch(e){ alert('Portal konnte nicht geöffnet werden.'); }
+  }
+  async function refreshBillingBanner(){
+    try{
+      const res=await (await authFetch(BACKEND+'/api/billing/status')).json();
+      const b=res.data||{}; const el=$('billingBanner');
+      if(b.status==='active'){ el.style.display='none'; return; }
+      if(b.active && b.status==='trial'){
+        el.style.display='block'; el.style.background='#FFF4E2'; el.style.border='1px solid #F0D3A0'; el.style.color='#8A5A12';
+        el.innerHTML='🎁 Testphase: noch <b>'+b.days_left+' Tag(e)</b> gratis. <a onclick="showBilling()" style="cursor:pointer;text-decoration:underline;color:#B5701A">Jetzt Abo sichern →</a>';
+      }else{
+        el.style.display='block'; el.style.background='#FBEEEA'; el.style.border='1px solid #E7C9C1'; el.style.color='#B23C22';
+        el.innerHTML='⚠️ Testphase abgelaufen. <a onclick="showBilling()" style="cursor:pointer;text-decoration:underline;color:#B23C22"><b>Abo wählen →</b></a>';
+      }
+    }catch(e){}
   }
   function showProject(id,name){
     hideAll();setNav('navProjects');$('viewProject').classList.remove('hidden');
@@ -348,12 +430,19 @@
       document.getElementById('userEmail').innerText=session.user.email||'';
       document.getElementById('logoutBtn').addEventListener('click',async()=>{ try{await supaClient.auth.signOut();}catch(e){} location.href='/login'; });
 
-      const urlProj=new URLSearchParams(location.search).get('projectId');
+      const params=new URLSearchParams(location.search);
+      const billingParam=params.get('billing');
+      if(billingParam==='success'){ try{history.replaceState({},'',location.pathname);}catch(e){} }
+
+      refreshBillingBanner();
+
+      const urlProj=params.get('projectId');
       if(urlProj){
         const res=await (await authFetch(BACKEND+'/api/projects')).json();
         const p=(res.data||[]).find(x=>x.project_id===urlProj);
         showProject(urlProj,p?p.project_name:urlProj);
-      }else{ showProjects(); }
+      }else if(billingParam){ showBilling(); }
+      else { showProjects(); }
     }catch(e){ location.href='/login'; }
   })();
 </script>

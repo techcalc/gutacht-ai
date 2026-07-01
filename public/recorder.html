@@ -262,6 +262,9 @@
         addCaught(res.befund||{},$('room').value.trim()||'Allgemein');
         toast('Befund erfasst und gespeichert.','ok');
         $('room').value='';photos=[];renderPhotos();
+      }else if(r.status===402 || res.code==='no_access'){
+        toast('Testphase abgelaufen. Bitte im Dashboard ein Abo wählen.','err');
+        setTimeout(()=>{ location.href='/dashboard?billing=cancel'; }, 1800);
       }else{toast('Fehler: '+(res.error||'unbekannt'),'err');}
     }catch(e){toast('Netzwerkfehler beim Senden.','err');}
     $('recBtn').disabled=false;$('status').innerText="Bereit für den nächsten Befund";$('status').style.color="var(--muted-d)";
