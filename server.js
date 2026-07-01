@@ -62,6 +62,7 @@ async function requireAuth(req, res, next) {
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_q,r)=>r.sendFile(path.join(__dirname,'public','index.html')));
 app.get('/login', (_q,r)=>r.sendFile(path.join(__dirname,'public','login.html')));
+app.get('/reset', (_q,r)=>r.sendFile(path.join(__dirname,'public','reset.html')));
 app.get('/app', (_q,r)=>r.sendFile(path.join(__dirname,'public','recorder.html')));
 app.get('/dashboard', (_q,r)=>r.sendFile(path.join(__dirname,'public','dashboard.html')));
 app.get('/health', (_q,r)=>r.json({ ok:true, model:GEMINI_MODEL, configured:configured() }));
