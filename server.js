@@ -11,6 +11,7 @@ const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const { GoogleGenAI } = require('@google/genai');
 const { createClient } = require('@supabase/supabase-js');
+const Stripe = require('stripe');
 require('dotenv').config();
 
 const app = express();
@@ -18,6 +19,8 @@ const PORT = process.env.PORT || 3000;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 app.use(cors());
+// Stripe-Webhook braucht den ROH-Body -> vor express.json registrieren
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 app.use(express.json({ limit: '40mb' }));
 app.use(express.urlencoded({ extended: true, limit: '40mb' }));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, fieldSize: 35 * 1024 * 1024 } });
@@ -34,6 +37,17 @@ const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GE
 const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } })
   : null;
+
+// --- Stripe (Abrechnung) ---
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://gutachtai.de';
+const TRIAL_DAYS = 14;
+const PRICE_IDS = {
+  starter:      process.env.STRIPE_PRICE_STARTER || '',
+  professional: process.env.STRIPE_PRICE_PRO || '',
+  kanzlei:      process.env.STRIPE_PRICE_KANZLEI || '',
+};
+const PLAN_LABEL = { starter:'Starter', professional:'Professional', kanzlei:'Kanzlei' };
 
 function configured() { return !!(ai && supabase); }
 function parseGeminiJson(t){ if(!t) throw new Error('Leere KI-Antwort'); return JSON.parse(String(t).replace(/```json/gi,'').replace(/```/g,'').trim()); }
@@ -73,7 +87,7 @@ app.get('/api/config', (_q,r)=>r.json({ url: process.env.SUPABASE_URL || '', ano
 // =====================================================================
 //  1) AUDIO (+FOTOS) -> GEMINI -> SUPABASE  (pro Nutzer)
 // =====================================================================
-app.post('/api/process-audio', requireAuth, upload.single('audio'), async (req, res) => {
+app.post('/api/process-audio', requireAuth, requireAccess, upload.single('audio'), async (req, res) => {
   try {
     const audioFile = req.file;
     const { projectId, projectName, roomOrSection } = req.body;
@@ -271,5 +285,118 @@ app.get('/api/generate-pdf', requireAuth, async (req, res) => {
     buildPdf(res, reports||[], settings||DEFAULTS, projectName);
   } catch (e) { console.error('generate-pdf:', e); if(!res.headersSent) res.status(500).json({ success:false, error:e.message }); }
 });
+
+// =====================================================================
+//  ABRECHNUNG (Stripe) – Testphase, Checkout, Portal, Webhook
+// =====================================================================
+async function getBilling(userId){
+  const { data } = await supabase.from('billing').select('*').eq('user_id', userId).maybeSingle();
+  return data;
+}
+async function ensureBilling(userId){
+  let row = await getBilling(userId);
+  if(!row){
+    const trialEnds = new Date(Date.now() + TRIAL_DAYS*86400000).toISOString();
+    const ins = await supabase.from('billing').insert({ user_id:userId, status:'trial', trial_ends_at:trialEnds }).select().maybeSingle();
+    row = ins.data || { user_id:userId, status:'trial', trial_ends_at:trialEnds };
+  }
+  return row;
+}
+function billingView(row){
+  const now = Date.now();
+  const trialEnds = row && row.trial_ends_at ? new Date(row.trial_ends_at).getTime() : 0;
+  const trialActive = row && row.status==='trial' && now < trialEnds;
+  const active = !!(row && row.status==='active') || trialActive;
+  const days_left = trialActive ? Math.max(0, Math.ceil((trialEnds-now)/86400000)) : 0;
+  return {
+    status: row ? row.status : 'trial',
+    plan: row && row.plan ? row.plan : null,
+    plan_label: row && row.plan ? (PLAN_LABEL[row.plan]||row.plan) : null,
+    active, days_left,
+    trial_ends_at: row ? row.trial_ends_at : null,
+    current_period_end: row && row.current_period_end ? row.current_period_end : null,
+    has_customer: !!(row && row.stripe_customer_id),
+  };
+}
+
+// Sperre für die Kern-Aktion (Aufnahme verarbeiten), wenn Test abgelaufen & kein Abo
+async function requireAccess(req, res, next){
+  try{
+    const row = await ensureBilling(req.userId);
+    if(!billingView(row).active) return res.status(402).json({ success:false, code:'no_access', error:'Deine Testphase ist abgelaufen. Bitte wähle ein Abo, um weiter Befunde zu erstellen.' });
+  }catch(e){ /* im Fehlerfall nicht hart blockieren */ }
+  next();
+}
+
+app.get('/api/billing/status', requireAuth, async (req, res) => {
+  try{ const row = await ensureBilling(req.userId); return res.json({ success:true, data: billingView(row) }); }
+  catch(e){ console.error('billing status:', e); return res.status(500).json({ success:false, error:e.message }); }
+});
+
+app.post('/api/billing/checkout', requireAuth, async (req, res) => {
+  try{
+    if(!stripe) return res.status(503).json({ success:false, error:'Stripe nicht konfiguriert.' });
+    const plan = (req.body && req.body.plan) || '';
+    if(!PRICE_IDS[plan]) return res.status(400).json({ success:false, error:'Unbekannter oder nicht konfigurierter Plan.' });
+    const row = await ensureBilling(req.userId);
+    let customerId = row.stripe_customer_id;
+    if(!customerId){
+      const c = await stripe.customers.create({ email:req.userEmail, metadata:{ userId:req.userId } });
+      customerId = c.id;
+      await supabase.from('billing').update({ stripe_customer_id:customerId }).eq('user_id', req.userId);
+    }
+    const session = await stripe.checkout.sessions.create({
+      mode:'subscription', customer:customerId,
+      line_items:[{ price:PRICE_IDS[plan], quantity:1 }],
+      client_reference_id:req.userId,
+      metadata:{ userId:req.userId, plan },
+      subscription_data:{ metadata:{ userId:req.userId, plan } },
+      allow_promotion_codes:true,
+      success_url: BASE_URL + '/dashboard?billing=success',
+      cancel_url:  BASE_URL + '/dashboard?billing=cancel',
+    });
+    return res.json({ success:true, url: session.url });
+  }catch(e){ console.error('checkout:', e); return res.status(500).json({ success:false, error:e.message }); }
+});
+
+app.post('/api/billing/portal', requireAuth, async (req, res) => {
+  try{
+    if(!stripe) return res.status(503).json({ success:false, error:'Stripe nicht konfiguriert.' });
+    const row = await getBilling(req.userId);
+    if(!row || !row.stripe_customer_id) return res.status(400).json({ success:false, error:'Noch kein Abo vorhanden.' });
+    const ps = await stripe.billingPortal.sessions.create({ customer:row.stripe_customer_id, return_url: BASE_URL + '/dashboard' });
+    return res.json({ success:true, url: ps.url });
+  }catch(e){ console.error('portal:', e); return res.status(500).json({ success:false, error:e.message }); }
+});
+
+// Stripe -> Server: Abo-Status synchronisieren (Roh-Body, Signatur-Prüfung)
+async function stripeWebhookHandler(req, res){
+  if(!stripe || !process.env.STRIPE_WEBHOOK_SECRET) return res.status(503).end();
+  let event;
+  try{ event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET); }
+  catch(e){ console.error('Webhook-Signatur ungültig:', e.message); return res.status(400).send('Webhook Error: '+e.message); }
+  try{
+    const o = event.data.object;
+    if(event.type === 'checkout.session.completed'){
+      const userId = o.client_reference_id || (o.metadata && o.metadata.userId);
+      const plan   = o.metadata && o.metadata.plan;
+      const updates = { status:'active', stripe_customer_id:o.customer, stripe_subscription_id:o.subscription, updated_at:new Date().toISOString() };
+      if(plan) updates.plan = plan;
+      if(userId) await supabase.from('billing').update(updates).eq('user_id', userId);
+    } else if(event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted'){
+      const sub = o;
+      let status = 'active';
+      if(event.type === 'customer.subscription.deleted') status = 'canceled';
+      else if(sub.status === 'active' || sub.status === 'trialing') status = 'active';
+      else if(sub.status === 'past_due' || sub.status === 'unpaid') status = 'past_due';
+      else if(sub.status === 'canceled') status = 'canceled';
+      const updates = { status, updated_at:new Date().toISOString() };
+      if(sub.metadata && sub.metadata.plan) updates.plan = sub.metadata.plan;
+      if(sub.current_period_end) updates.current_period_end = new Date(sub.current_period_end*1000).toISOString();
+      await supabase.from('billing').update(updates).eq('stripe_customer_id', sub.customer);
+    }
+  }catch(e){ console.error('Webhook-Verarbeitung:', e); }
+  return res.json({ received:true });
+}
 
 app.listen(PORT, '0.0.0.0', () => console.log(`GutachtAI (Phase 2 · Login) läuft auf Port ${PORT}  (Model: ${GEMINI_MODEL})`));
