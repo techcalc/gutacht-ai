@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GutachtAI – Neues Passwort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#F4F2EC;--card:#FFFFFF;--field:#FBFAF7;--line:#E7E3D9;
+    --amber:#E0922F;--amber-deep:#B5701A;--gold:#E8B45C;--ink:#1C1B19;--muted:#7A756A;--muted-2:#9A9488;--brick:#C0492B;--teal:#2F6F62;
+    --disp:'Archivo',sans-serif;--body:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--body);background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased;position:relative;overflow:hidden}
+  .glow{position:fixed;width:520px;height:520px;border-radius:50%;filter:blur(110px);background:rgba(224,146,47,.12);top:-220px;right:-160px;pointer-events:none}
+  a{color:inherit;text-decoration:none}
+  .logo{font-family:var(--disp);font-weight:800;font-size:24px;margin-bottom:26px;z-index:2;color:var(--ink)}
+  .logo b{color:var(--amber)}
+  .card{position:relative;z-index:2;width:100%;max-width:410px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:32px;box-shadow:0 20px 50px -30px rgba(0,0,0,.25)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber-deep)}
+  h1{font-family:var(--disp);font-weight:800;font-size:24px;margin:8px 0 22px;letter-spacing:-.02em}
+  label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+  input{width:100%;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:13px 14px;color:var(--ink);font-family:var(--body);font-size:15px;margin-bottom:16px}
+  input:focus{outline:none;border-color:var(--amber)}
+  .btn{width:100%;border:0;background:linear-gradient(135deg,var(--gold),var(--amber));color:#241808;font-family:var(--body);font-weight:700;font-size:15px;padding:14px;border-radius:11px;cursor:pointer;transition:.2s;box-shadow:0 10px 26px -12px rgba(224,146,47,.55)}
+  .btn:hover{transform:translateY(-1px)}
+  .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  .msg{font-size:13.5px;margin-top:14px;padding:11px 13px;border-radius:9px;display:none}
+  .msg.err{display:block;background:#fbeeea;border:1px solid #e7c9c1;color:#b23c22}
+  .msg.ok{display:block;background:#eaf5f0;border:1px solid #c4e2d6;color:#2f6f62}
+  .back{margin-top:22px;font-size:13px;color:var(--muted-2);z-index:2}
+  .back:hover{color:var(--amber-deep)}
+  .hint{font-size:12px;color:var(--muted-2);margin:-6px 0 14px}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<a href="/" class="logo">Gutacht<b>AI</b></a>
+
+<div class="card">
+  <div class="eyebrow">Passwort zurücksetzen</div>
+  <h1 id="title">Neues Passwort setzen</h1>
+
+  <div id="form">
+    <label>Neues Passwort</label>
+    <input type="password" id="pw1" placeholder="••••••••" autocomplete="new-password">
+    <label>Passwort wiederholen</label>
+    <input type="password" id="pw2" placeholder="••••••••" autocomplete="new-password">
+    <div class="hint">Mindestens 6 Zeichen.</div>
+    <button class="btn" id="saveBtn" onclick="save()">Passwort speichern</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+<a href="/login" class="back">← Zur Anmeldung</a>
+
+<script>
+  let supa=null, ready=false;
+  function showMsg(t,type){ const m=document.getElementById('msg'); m.className='msg '+type; m.innerText=t; }
+
+  (async function init(){
+    try{
+      const cfg=await (await fetch('/api/config')).json();
+      if(!cfg.url||!cfg.anonKey){ showMsg('Server nicht konfiguriert.','err'); return; }
+      supa=supabase.createClient(cfg.url,cfg.anonKey);
+      supa.auth.onAuthStateChange((event,session)=>{ if(session) ready=true; });
+      setTimeout(async ()=>{
+        const { data:{ session } } = await supa.auth.getSession();
+        if(session){ ready=true; }
+        else { showMsg('Dieser Link ist ungültig oder abgelaufen. Fordere einen neuen an.','err'); }
+      }, 700);
+    }catch(e){ showMsg('Verbindung fehlgeschlagen.','err'); }
+  })();
+
+  async function save(){
+    const p1=document.getElementById('pw1').value, p2=document.getElementById('pw2').value;
+    if(!p1||p1.length<6){ showMsg('Passwort muss mindestens 6 Zeichen haben.','err'); return; }
+    if(p1!==p2){ showMsg('Die Passwörter stimmen nicht überein.','err'); return; }
+    if(!ready){ showMsg('Kein gültiger Reset-Link aktiv. Bitte fordere einen neuen an.','err'); return; }
+    const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.innerText='Speichere…';
+    try{
+      const { error } = await supa.auth.updateUser({ password:p1 });
+      if(error) throw error;
+      showMsg('✅ Passwort geändert! Du wirst weitergeleitet…','ok');
+      setTimeout(()=>location.href='/dashboard', 1400);
+    }catch(e){ showMsg(e.message||'Fehler beim Speichern.','err'); btn.disabled=false; btn.innerText='Passwort speichern'; }
+  }
+</script>
+</body>
+</html>
